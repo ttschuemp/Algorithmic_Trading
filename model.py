@@ -12,6 +12,8 @@ import matplotlib as plt
 
 from binance import Client, ThreadedWebsocketManager, ThreadedDepthCacheManager
 from api_key_secret import api_key, api_secret
+from time import sleep
+from binance import ThreadedWebsocketManager
 
 
 client = Client(api_key, api_secret)
@@ -38,7 +40,7 @@ tickers = client.get_all_tickers()
 
 
 
-historical = client.get_historical_klines('ETHBTC', Client.KLINE_INTERVAL_1DAY, '1 Jan 2011')
+historical = client.get_historical_klines("ETHBUSD", Client.KLINE_INTERVAL_1MINUTE, "3 day ago UTC")
 hist_df = pd.DataFrame(historical)
 
 hist_df.columns = ['Open Time', 'Open', 'High', 'Low', 'Close', 'Volume', 'Close Time', 'Quote Asset Volume', 
@@ -53,9 +55,7 @@ hist_df[numeric_columns] = hist_df[numeric_columns].apply(pd.to_numeric, axis=1)
 
 
 
-
-
-
+hist_df['Open'].plot()
 
 
 
