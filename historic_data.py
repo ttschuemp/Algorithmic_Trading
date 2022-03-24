@@ -33,8 +33,7 @@ tickers = client.get_all_tickers()
 #     "2434.19055334",    // Quote asset volume
 #     308,                // Number of trades
 #     "1756.87402397",    // Taker buy base asset volume
-#     "28.46694368",      // Taker buy quote asset volume
-#     "17928899.62484339" // Ignore.
+#     "28.46694368",      // Taker buy quote asset volumeic#     "17928899.62484339" // Ignore.
 #   ]
 # ]
 
