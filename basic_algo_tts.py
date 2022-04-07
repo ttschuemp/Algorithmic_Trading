@@ -35,7 +35,7 @@ def fetch_data(ticker, days):
          "28.46694368",      // Taker buy quote asset volumeic#     "17928899.62484339" // Ignore.
     '''
     
-    historical = client.get_historical_klines(ticker, Client.KLINE_INTERVAL_1MINUTE, days+" day ago UTC")
+    historical = client.get_historical_klines(ticker, Client.KLINE_INTERVAL_1MINUTE, str(days)+" day ago UTC")
     hist_df = pd.DataFrame(historical)
     
     hist_df.columns = ['Open Time', 'Open', 'High', 'Low', 'Close', 'Volume', 'Close Time', 'Quote Asset Volume', 
