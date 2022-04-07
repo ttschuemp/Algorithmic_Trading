@@ -9,6 +9,7 @@ Created on Sun Mar 20 17:06:08 2022
 import pandas as pd 
 import numpy as np
 import matplotlib as plt
+import talib
 
 from binance import Client, ThreadedWebsocketManager, ThreadedDepthCacheManager
 from api_key_secret import api_key, api_secret
@@ -51,14 +52,12 @@ def fetch_data(ticker, days):
 
     return hist_df
 
-'''
 # STEP 2: COMPUTE THE TECHNICAL INDICATORS & APPLY THE TRADING STRATEGY
-def get_trade_recommendation(ticker_df):
+def get_trade_recommendation(df_hist):
   
     macd_result, final_result = 'WAIT','WAIT'
-
     # BUY or SELL based on MACD crossover points and the RSI value at that point
-    macd, signal, hist = talib.MACD(ticker_df['close'], fastperiod = 12, slowperiod = 26, signalperiod = 9)
+    macd, signal, hist = talib.MACD(df_hist['Close'], fastperiod = 12, slowperiod = 26, signalperiod = 9)
     last_hist = hist.iloc[-1]
     prev_hist = hist.iloc[-2]
     if not np.isnan(prev_hist) and not np.isnan(last_hist):
@@ -68,19 +67,15 @@ def get_trade_recommendation(ticker_df):
             macd_result = 'BUY' if last_hist > 0 else 'SELL'
             
     if macd_result != 'WAIT':
-        rsi = talib.RSI(ticker_df['close'], timeperiod = 14)
+        rsi = talib.RSI(df_hist['close'], timeperiod = 14)
         last_rsi = rsi.iloc[-1]
-
         if (last_rsi <= RSI_OVERSOLD):
             final_result = 'BUY'
         elif (last_rsi >= RSI_OVERBOUGHT):
             final_result = 'SELL'
-
     return final_result
 
-
-
-
+'''
 # STEP 3: EXECUTE THE TRADE
 def execute_trade(trade_rec_type, trading_ticker):
     global wx_client, HOLDING_QUANTITY
@@ -145,6 +140,7 @@ if __name__ == "__main__":
     days = '3'
     
     df_hist = fetch_data(ticker, days)
+    trade_rec_type = get_trade_recommendation(df_hist)
 
 
 
