@@ -8,7 +8,7 @@ Created on Thu Mar  3 21:35:53 2022
 
 import pandas as pd 
 import numpy as np
-import matplotlib as plt
+import matplotlib.pyplot as plt
 
 from binance import Client, ThreadedWebsocketManager, ThreadedDepthCacheManager
 from api_key_secret import api_key, api_secret

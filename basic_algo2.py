@@ -10,7 +10,7 @@ https://www.youtube.com/watch?v=X50-c54BWV8
 
 import pandas as pd 
 import numpy as np
-import matplotlib as plt
+import matplotlib.pyplot as plt
 import talib
 import ta
 
