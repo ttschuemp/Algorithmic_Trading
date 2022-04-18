@@ -14,15 +14,16 @@ import matplotlib.pyplot as plt
 import talib
 import ta
 
-from binance import Client, ThreadedWebsocketManager, ThreadedDepthCacheManager
+from binance import Client, AsyncClient, ThreadedWebsocketManager, ThreadedDepthCacheManager
 from api_key_secret import api_key, api_secret
-from time import sleep
+import time
 from binance import ThreadedWebsocketManager
 
 #https://medium.com/geekculture/building-a-basic-crypto-trading-bot-in-python-4f272693c375
 #STEP 1: fetch data
 
 client = Client(api_key,api_secret)
+client.API_URL = 'https://testnet.binance.vision/api'
 
 # STEP 1: FETCH THE DATA
 def fetch_data(ticker, interval, lookback):
@@ -49,7 +50,7 @@ def fetch_data(ticker, interval, lookback):
     return hist_df
 
 
-df = fetch_data("ADAUSDT", '1m', '100')
+df = fetch_data("BNBUSDT", '1m', '100')
     
 def trading_technicals(df):
     df['%K'] = ta.momentum.stoch(df.High,df.Low,df.Close, window=14, smooth_window=3)
@@ -82,20 +83,20 @@ class Signals:
                                         & (self.df.rsi > 50) & (self.df.macd >0),1,0)
         
         
-inst = Signals(df, 25)   #lag 5 is bether
+inst = Signals(df, 50)   #lag 5 is bether
 inst.decide()
 
 
-def strategy(pair, gty, open_position=False):
+def strategy(pair, qty, open_position=False):
     df = fetch_data(pair, '1m', '100')
     trading_technicals(df)
     inst = Signals(df,25)
     inst.decide()
-    print(f'current Close ist'+df.Close.iloc[-1])
+    print(f'current Close ist '+str(df.Close.iloc[-1]))
     if df.Buy.iloc[-1]:
         order = client.create_order(symbol=pair,
-                                    side = 'Buy',
-                                    type = 'Market',
+                                    side = 'BUY',
+                                    type = 'MARKET',
                                     quantity=qty)
         print(order)
         buyprice = float(order['fills'][0]['price'])
@@ -108,18 +109,18 @@ def strategy(pair, gty, open_position=False):
         print(f'current Stop is ' + str(buyprice * 0.995))
         if df.Close[-1] <= buyprice*0.995 or df.Close[-1] >= 1.005* buyprice:
             order = client.create_order(symbol=pair,
-                                        side = 'Buy',
-                                        type = 'Market',
+                                        side = 'SELL',
+                                        type = 'MARKET',
                                         quantity=qty)
             print(order)
             break
         
         
-"""loop for whole day
+#loop for whole day
 while True:
-    strategy('ADAUSDT',50)
+    strategy('BNBUSDT',1)
     time.sleep(0.5)
-"""
+
         
         
 

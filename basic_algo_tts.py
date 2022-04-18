@@ -76,7 +76,27 @@ def trading_technicals(df):
     df['rsi'] = ta.momentum.rsi(df.Close, window=14)
     df['macd'] = ta.trend.macd_diff(df.Close)
     df.dropna(inplace=True)
+
+class Signals:
+    def __init__(self,df, lags):
+        self.df = df
+        self.lags = lags
+        
+        
+    def gettrigger(self):
+        dfx = pd.DataFrame()
+        for i in range(self.lags + 1):
+            mask = (self.df['%K'].shift(i)<20) & (self.df['%D'].shift(i)<20)
+            dfx = dfx.append(mask, ignore_index=True)
+        return dfx.sum(axis=0)
     
+    
+    def decide(self):
+        self.df['trigger'] = np.where(self.gettrigger(),1,0)
+        self.df['Buy'] = np.where((self.df.trigger) &
+        (self.df['%K'].between(20,80)) & (self.df['%D'].between(20,80))
+                                        & (self.df.rsi > 50) & (self.df.macd >0),1,0)
+
 
 
 
@@ -87,19 +107,23 @@ if __name__ == "__main__":
     
     tickers = client.get_all_tickers()
     
-    ticker = "NEOUSDT"
+    ticker = "BTCUSDT"
     interval = '1m'
     lookback = '300'
     
     df_hist = fetch_data(ticker, interval, lookback)
     trading_technicals(df_hist)
     
+        
+    inst = Signals(df_hist, 5)   #lag 5 is bether
+    inst.decide()
 
     figure, axis = plt.subplots(2, 2)
       
     axis[0, 0].plot(df_hist['Open'])
     axis[0, 0].set_title(df_hist['Open'].name)
-      
+    axis[0, 0].plot(df_hist.Open[df_hist['Buy']==1], "s")
+    
     axis[0, 1].plot(df_hist['%K'])
     axis[0, 1].set_title(df_hist['%K'].name)
       
@@ -112,8 +136,11 @@ if __name__ == "__main__":
     # Combine all the operations and display
     plt.show()
     
+
     
-    trade_rec_type = get_trade_recommendation(df_hist)
+    
+    
+    #trade_rec_type = get_trade_recommendation(df_hist)
     
     
     
