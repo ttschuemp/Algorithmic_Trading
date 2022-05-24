@@ -18,18 +18,18 @@ import datetime
 
 
 from binance import Client, AsyncClient, ThreadedWebsocketManager, ThreadedDepthCacheManager
-from api_key_secret import api_key2, api_secret2
+from api_key_secret import api_key, api_secret
 import time
 from binance import ThreadedWebsocketManager
 
 #https://medium.com/geekculture/building-a-basic-crypto-trading-bot-in-python-4f272693c375
 #STEP 1: fetch data
 
-matplotlib.use('Qt5Agg')
-plt.switch_backend('Qt5Agg')
+# matplotlib.use('Qt5Agg')
+# plt.switch_backend('Qt5Agg')
 
 
-client = Client(api_key2,api_secret2)
+client = Client(api_key,api_secret)
 client.API_URL = 'https://testnet.binance.vision/api'
 
 

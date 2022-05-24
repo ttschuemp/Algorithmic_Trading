@@ -4,7 +4,7 @@ save_data_on_exit = True
 save_history = True
 save_non_project_files = False
 project_type = 'empty-project-type'
-recent_files = ['model.py', 'api_key_secret.py', 'websocket.py']
+recent_files = ['historic_data.py', 'websocket.py', 'basic_algo_tts.py', 'basic_algo2.py', 'api_key_secret.py']
 
 [main]
 version = 0.2.0

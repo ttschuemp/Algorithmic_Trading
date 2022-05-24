@@ -37,7 +37,7 @@ def fetch_data(ticker, interval, lookback):
     return hist_df
 
 
-data = fetch_data("LUNABUSD", '1m', '50')
+data = fetch_data("BTCUSDC", '1m', '5000')
 
 cerebro = bt.Cerebro() 
 
@@ -45,8 +45,8 @@ cerebro = bt.Cerebro()
 
 class SmaCross(bt.Strategy):
     def __init__(self):
-        sma1 = bt.ind.SMA(period=1)  # fast moving average
-        sma2 = bt.ind.SMA(period=2)  # slow moving average
+        sma1 = bt.ind.SMA(period=100)  # fast moving average
+        sma2 = bt.ind.SMA(period=200)  # slow moving average
         self.crossover = bt.ind.CrossOver(sma1, sma2)  # crossover signal
 
     def next(self):
@@ -60,5 +60,8 @@ class SmaCross(bt.Strategy):
 feed = bt.feeds.PandasData(dataname=data)
 cerebro.adddata(feed)
 cerebro.addstrategy(SmaCross)  # Add the trading strategy
+cerebro.addsizer(bt.sizers.PercentSizer, percents=50)
 cerebro.run()  # run it all
-cerebro.plot() # create a "Cerebro" engine instance
+cerebro.plot(iplot=False) # create a "Cerebro" engine instance
+
+
