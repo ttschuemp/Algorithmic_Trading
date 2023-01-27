@@ -251,8 +251,6 @@ def trading_strategy_pairs_backtest(data, std_dev):
 
 
 
-
-
 #%%
 
 data_pairs = data_pairs.dropna()
