@@ -1,0 +1,1 @@
+https://bloomberg.bintray.com/pip/simple
