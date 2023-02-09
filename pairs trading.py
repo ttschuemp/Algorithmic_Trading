@@ -255,7 +255,6 @@ def trading_strategy_pairs_backtest(data, std_dev):
 
 
 
-
 #%%
 # first step: find cointegrated pairs
 # problem false positive with multiple testing
