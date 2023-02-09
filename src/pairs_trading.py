@@ -65,7 +65,6 @@ def calc_dynamic_hedge_ratio_ols(data, window):
     return hedge_ratio, spread_ols
 
 
-
 def calc_bollinger_ols(data, window, std_dev):
     """
     Calculates rolling spread and bollinger bands
