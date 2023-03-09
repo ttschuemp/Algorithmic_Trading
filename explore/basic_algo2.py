@@ -22,7 +22,10 @@ from binance import ThreadedWebsocketManager
 #https://medium.com/geekculture/building-a-basic-crypto-trading-bot-in-python-4f272693c375
 #STEP 1: fetch data
 
-client = Client(api_key,api_secret)
+api_key = 'MKBNxBnIVjKtxdYGMo130QzS9bdCoZY7YjnnQPjPfRMcBD7MwZQF27ab0lT7FJqL'
+api_secret = 'V14OTjBICA4eV0ZgND8LKuuZxXsVZKk7eOccxMuGIOIJcn3ksGih8dOSx3bG0G5i'
+
+client = Client(api_key,api_secret, {"verify": "C:\DevLab\Zscaler Zertifikat.cer", "timeout": 20})
 client.API_URL = 'https://testnet.binance.vision/api'
 
 # STEP 1: FETCH THE DATA
@@ -115,7 +118,18 @@ def strategy(pair, qty, open_position=False):
             print(order)
             break
         
-        
+
+
+
+#%%
+# fetch crypto data
+api_key = 'MKBNxBnIVjKtxdYGMo130QzS9bdCoZY7YjnnQPjPfRMcBD7MwZQF27ab0lT7FJqL'
+api_secret = 'V14OTjBICA4eV0ZgND8LKuuZxXsVZKk7eOccxMuGIOIJcn3ksGih8dOSx3bG0G5i'
+
+client = Client(api_key,api_secret, {"verify": "C:\DevLab\Zscaler Zertifikat.cer", "timeout": 20})
+
+
+#%%
 #loop for whole day
 while True:
     strategy('BNBUSDT',1)
