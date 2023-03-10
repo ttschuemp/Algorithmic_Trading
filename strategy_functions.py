@@ -226,3 +226,4 @@ def dynamic_trading_strategy_pairs_backtest(data, window, std_dev):
     # plot equity curve
     plt.plot(np.cumsum(pnl))
     return sharpe_ratio
+
