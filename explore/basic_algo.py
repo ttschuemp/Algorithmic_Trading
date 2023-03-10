@@ -6,6 +6,8 @@ Created on Sun Mar 20 17:06:08 2022
 @author: marcopegoraro
 """
 
+# test
+
 import ccxt
 print (ccxt.exchanges)
 

@@ -7,7 +7,6 @@ from src.pairs_trading import find_cointegrated_pairs, calc_dynamic_hedge_ratio_
 
 # get system path
 
-
 if __name__ == "__main__":
     # get working directory
     cwd = os.getcwd()

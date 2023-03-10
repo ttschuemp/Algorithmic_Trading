@@ -13,7 +13,7 @@ from statsmodels.tsa.vector_ar.vecm import coint_johansen
 from scipy import stats
 #from xbbg import blp
 
-
+# test push
 
 # function for pairs trading with walk forward hedge ratio
 
@@ -63,6 +63,7 @@ def calc_dynamic_hedge_ratio_ols(data, window):
     spread_ols = data.iloc[window::, 0] - data.iloc[window::, 1] * hedge_ratio
 
     return hedge_ratio, spread_ols
+
 
 
 def calc_bollinger_ols(data, window, std_dev):
