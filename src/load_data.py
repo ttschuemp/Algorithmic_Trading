@@ -1,6 +1,5 @@
 import pandas as pd
 
-
 # make a function to load data
 def load_data(path):
     # load csv file in data pairs
@@ -60,3 +59,4 @@ def fetch_crypto_data(top_n, days):
     # Combine the dataframes into one
 
     return pd.concat(df_list, axis=1)
+
