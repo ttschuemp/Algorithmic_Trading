@@ -1,5 +1,6 @@
 import pandas as pd
 
+
 # make a function to load data
 def load_data(path):
     # load csv file in data pairs
