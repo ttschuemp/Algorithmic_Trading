@@ -1,1 +1,1 @@
-# hasans nau script
+# hasans aktien nau script
