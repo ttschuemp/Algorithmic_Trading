@@ -1,5 +1,6 @@
 import pandas as pd
 
+
 # make a function to load data
 def load_data(path):
     # load csv file in data pairs
@@ -40,7 +41,7 @@ def fetch_crypto_data(top_n, days):
     for symbol in ticker_pairs:
         try:
             klines = client.get_historical_klines(symbol, Client.KLINE_INTERVAL_1HOUR, start_time.strftime("%d %b %Y %H:%M:%S"), end_time.strftime("%d %b %Y %H:%M:%S"))
-            if len(klines) >= days*24-1:
+            if len(klines) >= (days-1)*24:
                 df = pd.DataFrame(klines, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ignore'])
                 df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
                 df.set_index('timestamp', inplace=True)
