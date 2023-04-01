@@ -3,10 +3,6 @@ import requests
 from datetime import datetime, timedelta
 import time
 from binance import Client, ThreadedWebsocketManager, ThreadedDepthCacheManager
-#from api_key_secret import api_key, api_secret
-
-#client = Client(api_key, api_secret)
-#client.API_URL = 'https://testnet.binance.vision/api'
 
 
 # make a function to load data
@@ -17,7 +13,7 @@ def load_data(path):
     data.index.name = 'date'
     return data
 
-def fetch_data(ticker, interval, lookback):
+def fetch_data(ticker, interval, lookback, client):
     # fetch binance data
     hist_df = pd.DataFrame(client.get_historical_klines(ticker, interval, lookback + 'hours ago UTC'))
     hist_df = hist_df.iloc[:,:6]
@@ -69,4 +65,3 @@ def fetch_crypto_data(top_n, days, client):
     # Combine the dataframes into one
 
     return pd.concat(df_list, axis=1)
-
