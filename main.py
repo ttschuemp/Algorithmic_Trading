@@ -2,17 +2,21 @@ import os
 import sys
 import pandas as pd
 import numpy as np
-from src.load_data import load_data
+import requests
+from src.load_data import fetch_crypto_data
 from src.pairs_trading import find_cointegrated_pairs, calc_dynamic_hedge_ratio_ols, calc_bollinger_ols, dynamic_trading_strategy_pairs_backtest
+from binance import Client, ThreadedWebsocketManager, ThreadedDepthCacheManager
+from api_key_secret import api_key, api_secret
+import requests
+from datetime import datetime, timedelta
+import time
 
-# get system path
 
 if __name__ == "__main__":
-    # get working directory
-    cwd = os.getcwd()
-    # get data file path
-    path = os.path.join(cwd, "src/data/data pairs.csv")
-    data = load_data(path)
+
+    client = Client(api_key,api_secret)
+    client.API_URL = 'https://testnet.binance.vision/api'
+    data = fetch_crypto_data(10, 2, client)
 
     pairs = find_cointegrated_pairs(data)
 
