@@ -1,6 +1,6 @@
 import pandas as pd
 import requests
-from datetime import datetime, timedelta
+import datetime
 import time
 from binance import Client, ThreadedWebsocketManager, ThreadedDepthCacheManager
 
@@ -38,8 +38,8 @@ def fetch_crypto_data(top_n, days, client):
     ticker_pairs = [f"{ticker.upper()}" for ticker in ticker_pairs]
 
     # Define the start and end time for the historical data
-    end_time = datetime.now()
-    start_time = end_time - timedelta(days=days)
+    end_time = datetime.datetime.now()
+    start_time = end_time - datetime.timedelta(days=days)
 
     # Loop over the trading pairs and retrieve the historical intra-day 1-hour ticks
     df_list = []

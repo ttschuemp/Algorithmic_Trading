@@ -1,49 +1,15 @@
 # coding: utf-8
-# ##################################################################
-# Pair Trading adapted to backtrader
-# with PD.OLS and info for StatsModel.API
-# author: Remi Roche
-##################################################################
 
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
-import os
-import sys
-import pandas as pd
-import numpy as np
-import requests
-from src.load_data import fetch_crypto_data
-from src.pairs_trading import find_cointegrated_pairs, calc_dynamic_hedge_ratio_ols, calc_bollinger_ols, dynamic_trading_strategy_pairs_backtest
-from binance import Client, ThreadedWebsocketManager, ThreadedDepthCacheManager
-from api_key_secret import api_key, api_secret
-import requests
-import datetime
-import time
-
-import argparse
-# The above could be sent to an independent module
 import backtrader as bt
-import backtrader.feeds as btfeeds
 import backtrader.indicators as btind
 
 
 class PairTradingStrategy(bt.Strategy):
-    params = dict(
-        period=10,
-        stake=10,
-        qty1=0,
-        qty2=0,
-        printout=True,
-        upper=2.1,
-        lower=-2.1,
-        up_medium=0.5,
-        low_medium=-0.5,
-        status=0,
-        portfolio_value=10000,
-    )
 
     def log(self, txt, dt=None):
-        if self.p.printout:
+        if self.printout:
             dt = dt or self.data.datetime[0]
             dt = bt.num2date(dt)
             print('%s, %s' % (dt.isoformat(), txt))
@@ -67,21 +33,25 @@ class PairTradingStrategy(bt.Strategy):
         # Allow new orders
         self.orderid = None
 
-    def __init__(self):
-        # To control operation entries
+    def __init__(self, qty1, qty2, upper, lower, up_medium, low_medium, status, 
+                portfolio_value, period, printout=True):
+        # To control parameter entries
         self.orderid = None
-        self.qty1 = self.p.qty1
-        self.qty2 = self.p.qty2
-        self.upper_limit = self.p.upper
-        self.lower_limit = self.p.lower
-        self.up_medium = self.p.up_medium
-        self.low_medium = self.p.low_medium
-        self.status = self.p.status
-        self.portfolio_value = self.p.portfolio_value
+        self.qty1 = qty1
+        self.qty2 = qty2
+        self.upper_limit = upper
+        self.lower_limit = lower
+        self.up_medium = up_medium
+        self.low_medium = low_medium
+        self.status = status
+        self.portfolio_value = portfolio_value
+        self.data0 = self.datas[0]
+        self.data1 = self.datas[1]
+        self.period = period
+        self.printout = printout
 
         # Signals performed with PD.OLS :
-        self.transform = btind.OLS_TransformationN(self.data0, self.data1,
-                                                   period=self.p.period)
+        self.transform = btind.OLS_TransformationN()
         self.zscore = self.transform.zscore
 
         # Checking signals built with StatsModel.API :
@@ -94,7 +64,7 @@ class PairTradingStrategy(bt.Strategy):
         if self.orderid:
             return  # if an order is active, no new orders are allowed
 
-        if self.p.printout:
+        if self.printout:
             print('Self  len:', len(self))
             print('Data0 len:', len(self.data0))
             print('Data1 len:', len(self.data1))
@@ -168,103 +138,3 @@ class PairTradingStrategy(bt.Strategy):
         print('Starting Value - %.2f' % self.broker.startingcash)
         print('Ending   Value - %.2f' % self.broker.getvalue())
         print('==================================================')
-
-
-def runstrategy():
-    args = parse_args()
-
-    cerebro = bt.Cerebro()
-
-    client = Client(api_key,api_secret)
-    client.API_URL = 'https://testnet.binance.vision/api'
-    data = fetch_crypto_data(10, 2, client)
-
-    pairs = find_cointegrated_pairs(data)
-
-    # choose pair wits smallest p-value in pairs
-    tickers_pairs = pairs.iloc[0,0:2]
-
-    # new data frame with only the two tickers
-    data_pairs = data[tickers_pairs]
-
-    # Get the dates from the args
-    fromdate = datetime.datetime.strptime(args.fromdate, '%Y-%m-%d')
-    todate = datetime.datetime.strptime(args.todate, '%Y-%m-%d')
-
-    data1 = bt.feeds.PandasData(dataname=pd.DataFrame(data_pairs.iloc[:, 0]))
-    data2 = bt.feeds.PandasData(dataname=pd.DataFrame(data_pairs.iloc[:, 1]))
-    cerebro.adddata(data1)
-    cerebro.adddata(data2)
-
-    # Add the strategy
-    cerebro.addstrategy(PairTradingStrategy,
-                        period=args.period,
-                        stake=args.stake)
-
-    # Add the commission - only stocks like a for each operation
-    cerebro.broker.setcash(args.cash)
-
-    # Add the commission - only stocks like a for each operation
-    cerebro.broker.setcommission(commission=args.commperc)
-
-    # And run it
-    cerebro.run(runonce=not args.runnext,
-                preload=not args.nopreload,
-                oldsync=args.oldsync)
-
-    # Plot if requested
-    if args.plot:
-        cerebro.plot(numfigs=args.numfigs, volume=False, zdown=False)
-
-
-def parse_args():
-    parser = argparse.ArgumentParser(description='MultiData Strategy')
-
-    parser.add_argument('--data0', '-d0',
-                        default='../../datas/daily-PEP.csv',
-                        help='1st data into the system')
-
-    parser.add_argument('--data1', '-d1',
-                        default='../../datas/daily-KO.csv',
-                        help='2nd data into the system')
-
-    parser.add_argument('--fromdate', '-f',
-                        default='1997-01-01',
-                        help='Starting date in YYYY-MM-DD format')
-
-    parser.add_argument('--todate', '-t',
-                        default='1998-06-01',
-                        help='Starting date in YYYY-MM-DD format')
-
-    parser.add_argument('--period', default=10, type=int,
-                        help='Period to apply to the Simple Moving Average')
-
-    parser.add_argument('--cash', default=100000, type=int,
-                        help='Starting Cash')
-
-    parser.add_argument('--runnext', action='store_true',
-                        help='Use next by next instead of runonce')
-
-    parser.add_argument('--nopreload', action='store_true',
-                        help='Do not preload the data')
-
-    parser.add_argument('--oldsync', action='store_true',
-                        help='Use old data synchronization method')
-
-    parser.add_argument('--commperc', default=0.005, type=float,
-                        help='Percentage commission (0.005 is 0.5%%')
-
-    parser.add_argument('--stake', default=10, type=int,
-                        help='Stake to apply in each operation')
-
-    parser.add_argument('--plot', '-p', default=True, action='store_true',
-                        help='Plot the read data')
-
-    parser.add_argument('--numfigs', '-n', default=1,
-                        help='Plot using numfigs figures')
-
-    return parser.parse_args()
-
-
-if __name__ == '__main__':
-    runstrategy()
