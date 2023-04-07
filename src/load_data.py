@@ -1,4 +1,8 @@
 import pandas as pd
+import requests
+import datetime
+import time
+from binance import Client, ThreadedWebsocketManager, ThreadedDepthCacheManager
 
 
 # make a function to load data
@@ -9,7 +13,7 @@ def load_data(path):
     data.index.name = 'date'
     return data
 
-def fetch_data(ticker, interval, lookback):
+def fetch_data(ticker, interval, lookback, client):
     # fetch binance data
     hist_df = pd.DataFrame(client.get_historical_klines(ticker, interval, lookback + 'hours ago UTC'))
     hist_df = hist_df.iloc[:,:6]
@@ -19,12 +23,13 @@ def fetch_data(ticker, interval, lookback):
     hist_df = hist_df.astype(float)
     return hist_df
 
-def fetch_crypto_data(top_n, days):
+def fetch_crypto_data(top_n, days, client):
     # Get the top N cryptocurrencies by market cap from CoinGecko API
     response = requests.get(f"https://api.coingecko.com/api/v3/coins/"
                             f"markets?vs_currency=usd&order=market_cap_desc&per_page={top_n}&"
-                            f"page=1&sparkline=false&price_change_percentage=24h",
-                            verify="C:\DevLab\Zscaler Zertifikat.cer")
+                            f"page=1&sparkline=false&price_change_percentage=24h"
+                            #, verify="C:\DevLab\Zscaler Zertifikat.cer"
+                            )
     top_cryptos = response.json()
 
     # Construct a list of ticker pairs for the top cryptocurrencies against USDT
@@ -33,8 +38,8 @@ def fetch_crypto_data(top_n, days):
     ticker_pairs = [f"{ticker.upper()}" for ticker in ticker_pairs]
 
     # Define the start and end time for the historical data
-    end_time = datetime.now()
-    start_time = end_time - timedelta(days=days)
+    end_time = datetime.datetime.now()
+    start_time = end_time - datetime.timedelta(days=days)
 
     # Loop over the trading pairs and retrieve the historical intra-day 1-hour ticks
     df_list = []
@@ -60,4 +65,3 @@ def fetch_crypto_data(top_n, days):
     # Combine the dataframes into one
 
     return pd.concat(df_list, axis=1)
-

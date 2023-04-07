@@ -1,44 +1,74 @@
-import os
-import sys
 import pandas as pd
-import numpy as np
-from src.load_data import load_data
-from src.pairs_trading import find_cointegrated_pairs, calc_dynamic_hedge_ratio_ols, calc_bollinger_ols, dynamic_trading_strategy_pairs_backtest
-
-# get system path
+from src.pairs_trading_backtrader import PairTradingStrategy
+from src.pairs_trading_functions import find_cointegrated_pairs
+from src.load_data import fetch_crypto_data
+from binance import Client
+from api_key_secret import api_key, api_secret
+import backtrader as bt
 
 if __name__ == "__main__":
-    # get working directory
-    cwd = os.getcwd()
-    # get data file path
-    path = os.path.join(cwd, "src/data/data pairs.csv")
-    data = load_data(path)
+
+    cerebro = bt.Cerebro()
+
+    client = Client(api_key,api_secret)
+    client.API_URL = 'https://testnet.binance.vision/api'
+    data = fetch_crypto_data(10, 2, client)
 
     pairs = find_cointegrated_pairs(data)
 
     # choose pair wits smallest p-value in pairs
     tickers_pairs = pairs.iloc[0,0:2]
 
+
     # new data frame with only the two tickers
     data_pairs = data[tickers_pairs]
 
-    # trading strategy using dynamic hedge ratio from OLS and upper and lower bound threshold from z-spread
-    # sell spread if z-score > threshold
-    # buy spread if z-score < threshold
+    data0 = bt.feeds.PandasData(dataname=pd.DataFrame(data_pairs.iloc[:, 0]))
+    data1 = bt.feeds.PandasData(dataname=pd.DataFrame(data_pairs.iloc[:, 1]))
+    cerebro.adddata(data0)
+    cerebro.adddata(data1)
 
     # params
-    window = 20
-    threshold = 2
+    period=10
+#    stake=10
+    qty1=0
+    qty2=0
+    printout=True
+    upper=2.1
+    lower=-2.1
+    up_medium=0.5
+    low_medium=-0.5
+    status=0
+    portfolio_value=10000
+    cash = 10000
+    commission = 0.005
 
-    data_pairs = data_pairs.dropna()
+     # Add the strategy
+    cerebro.addstrategy(PairTradingStrategy,
+                        period=period,
+                        #stake=stake,
+                        qty1=qty1,
+                        qty2=qty2,
+                        printout=printout,
+                        upper=upper,
+                        lower=lower,
+                        up_medium=up_medium,
+                        low_medium=low_medium,
+                        status=status,
+                        #data0=data0,
+                        #data1=data1,
+                        portfolio_value=portfolio_value)
 
-    # calc dynamic hedge ratio
-    hedge_ratio, spread_ols = calc_dynamic_hedge_ratio_ols(data_pairs, window=window)
-    pd.DataFrame(hedge_ratio).plot()
+    # Add the commission - only stocks like a for each operation
+    cerebro.broker.setcash(cash)
 
-    # calc z-spread
-    spread, z_spread, spread_mean, upper_band, lower_band, hedge_ratio = calc_bollinger_ols(data_pairs, window = window, std_dev = threshold)
-    z_spread.plot()
+    # Add the commission - only stocks like a for each operation
+    cerebro.broker.setcommission(commission=commission)
 
-    # backtest strategy
-    dynamic_trading_strategy_pairs_backtest(data_pairs, window=window, std_dev= threshold)
+    # And run it
+    cerebro.run(runonce=False,
+                preload=True,
+                oldsync=True)
+    
+    # Plot if requested
+    cerebro.plot(volume=False, zdown=False)
