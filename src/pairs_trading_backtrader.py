@@ -51,7 +51,7 @@ class PairTradingStrategy(bt.Strategy):
         self.printout = printout
 
         # Signals performed with PD.OLS :
-        self.transform = btind.OLS_TransformationN()
+        self.transform = btind.OLS_TransformationN(self.data0, self.data1, period=2) # type: ignore
         self.zscore = self.transform.zscore
 
         # Checking signals built with StatsModel.API :
