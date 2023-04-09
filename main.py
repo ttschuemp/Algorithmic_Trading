@@ -1,7 +1,8 @@
 import pandas as pd
 from src.pairs_trading_backtrader import PairTradingStrategy
+from src.test_strategy_backtrader import MyStrategy
 from src.pairs_trading_functions import find_cointegrated_pairs
-from src.load_data import fetch_crypto_data
+from src.load_data import fetch_crypto_data, fetch_data
 from binance import Client
 from api_key_secret import api_key, api_secret
 import backtrader as bt
@@ -19,14 +20,20 @@ if __name__ == "__main__":
     # choose pair wits smallest p-value in pairs
     tickers_pairs = pairs.iloc[0,0:2]
 
+    # get data for pair
+    data0 = fetch_data(tickers_pairs[0], '1h', '24', client)
+    data1 = fetch_data(tickers_pairs[1], '1h', '24', client)
 
-    # new data frame with only the two tickers
-    data_pairs = data[tickers_pairs]
-
-    data0 = bt.feeds.PandasData(dataname=pd.DataFrame(data_pairs.iloc[:, 0]))
-    data1 = bt.feeds.PandasData(dataname=pd.DataFrame(data_pairs.iloc[:, 1]))
+    data0 = bt.feeds.PandasData(dataname=pd.DataFrame(data0))
+    data1 = bt.feeds.PandasData(dataname=pd.DataFrame(data1))
     cerebro.adddata(data0)
     cerebro.adddata(data1)
+
+    # Check if data feeds were added
+    if len(cerebro.datas) == 2:
+        print('Data feeds added successfully')
+    else:
+        print('Error: Data feeds not added')
 
     # params
     period=10
@@ -42,22 +49,23 @@ if __name__ == "__main__":
     portfolio_value=10000
     cash = 10000
     commission = 0.005
-
+    
+    #cerebro.addstrategy(MyStrategy)
      # Add the strategy
     cerebro.addstrategy(PairTradingStrategy,
-                        period=period,
-                        #stake=stake,
-                        qty1=qty1,
-                        qty2=qty2,
-                        printout=printout,
-                        upper=upper,
-                        lower=lower,
-                        up_medium=up_medium,
-                        low_medium=low_medium,
-                        status=status,
-                        #data0=data0,
-                        #data1=data1,
-                        portfolio_value=portfolio_value)
+                          period=period,
+                          #stake=stake,
+                          qty1=qty1,
+                          qty2=qty2,
+                          printout=printout,
+                          upper=upper,
+                          lower=lower,
+                          up_medium=up_medium,
+                          low_medium=low_medium,
+                          status=status,
+                          #data0=data0,
+                          #data1=data1,
+                          portfolio_value=portfolio_value)
 
     # Add the commission - only stocks like a for each operation
     cerebro.broker.setcash(cash)
@@ -71,4 +79,4 @@ if __name__ == "__main__":
                 oldsync=True)
     
     # Plot if requested
-    cerebro.plot(volume=False, zdown=False)
+    #cerebro.plot(volume=False, zdown=False)
