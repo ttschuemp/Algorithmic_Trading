@@ -13,7 +13,7 @@ if __name__ == "__main__":
 
     client = Client(api_key,api_secret, {"verify": path_zert})
     client.API_URL = 'https://testnet.binance.vision/api'
-    data = fetch_crypto_data(10, 2, client)
+    data = fetch_crypto_data(50, 90, client)
 
     pairs = find_cointegrated_pairs(data)
 
