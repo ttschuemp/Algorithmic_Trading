@@ -4,6 +4,10 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 import backtrader as bt
 import backtrader.indicators as btind
+import statsmodels.api as sm
+import statsmodels.tsa.stattools as ts
+
+
 
 
 class PairTradingStrategy(bt.Strategy):
@@ -33,12 +37,41 @@ class PairTradingStrategy(bt.Strategy):
         # Allow new orders
         self.orderid = None
 
-    def __init__(self, qty1, qty2, upper, lower, up_medium, low_medium, status, 
+
+    def calc_dynamic_hedge_ratio_ols(self):
+        hedge_ratio = []
+        for i in range(self.window, len(self.datas)):
+            # Estimate hedge ratio using OLS
+            y = self.data0.iloc[i-self.window:i,0]
+            x = self.data1.iloc[i-self.window:i,1]
+            x = sm.add_constant(x)
+            model = sm.OLS(y, x).fit()
+            hedge_ratio.append(model.params[1])
+
+        spread_ols = self.data0.iloc[self.window::, 0] - self.data1.iloc[self.window::, 1] * hedge_ratio
+
+        return hedge_ratio, spread_ols
+
+
+    def calc_bollinger_ols(self):
+        hedge_ratio, spread = self.calc_dynamic_hedge_ratio_ols()
+        spread_mean = spread.rolling(self.window).mean()
+        spread_std = spread.rolling(self.window).std()
+        z_spread = (spread - spread_mean) / spread_std
+        upper_band = spread_mean + self.std_dev * spread_std
+        lower_band = spread_mean - self.std_dev * spread_std
+
+        return spread, z_spread, spread_mean, upper_band, lower_band, hedge_ratio
+
+
+    def __init__(self, qty1, qty2, window, std_dev, upper, lower, up_medium, low_medium, status,
                 portfolio_value, period, printout=True):
         # To control parameter entries
         self.orderid = None
         self.qty1 = qty1
         self.qty2 = qty2
+        self.window = window
+        self.std_dev = std_dev
         self.upper_limit = upper
         self.lower_limit = lower
         self.up_medium = up_medium
@@ -51,8 +84,8 @@ class PairTradingStrategy(bt.Strategy):
         self.printout = printout
 
         # Signals performed with PD.OLS :
-        self.transform = btind.OLS_TransformationN(self.data0, self.data1, period=2) # type: ignore
-        self.zscore = self.transform.zscore
+        #self.transform = btind.OLS_TransformationN(self.data0, self.data1, period=2) # type: ignore
+        #self.zscore = self.transform.zscore
 
         # Checking signals built with StatsModel.API :
         # self.ols_transfo = btind.OLS_Transformation(self.data0, self.data1,
