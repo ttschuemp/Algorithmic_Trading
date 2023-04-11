@@ -7,6 +7,7 @@ from binance import Client
 from api_key_secret import api_key, api_secret
 import backtrader as bt
 
+
 if __name__ == "__main__":
 
     cerebro = bt.Cerebro()
