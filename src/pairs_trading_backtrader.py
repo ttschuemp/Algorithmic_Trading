@@ -63,6 +63,12 @@ class PairTradingStrategy(bt.Strategy):
 
         return spread, z_spread, spread_mean, upper_band, lower_band, hedge_ratio
 
+    def zscore(self):
+        spread, z_spread, spread_mean, upper_band, lower_band, hedge_ratio = self.calc_bollinger_ols()
+        zscore = (spread - spread_mean) / spread_std
+
+        return zscore
+
 
     def __init__(self, qty1, qty2, window, std_dev, upper, lower, up_medium, low_medium, status,
                 portfolio_value, period, printout=True):
@@ -85,7 +91,7 @@ class PairTradingStrategy(bt.Strategy):
 
         # Signals performed with PD.OLS :
         #self.transform = btind.OLS_TransformationN(self.data0, self.data1, period=2) # type: ignore
-        #self.zscore = self.transform.zscore
+        self.zscore = self.zscore()
 
         # Checking signals built with StatsModel.API :
         # self.ols_transfo = btind.OLS_Transformation(self.data0, self.data1,
@@ -171,3 +177,5 @@ class PairTradingStrategy(bt.Strategy):
         print('Starting Value - %.2f' % self.broker.startingcash)
         print('Ending   Value - %.2f' % self.broker.getvalue())
         print('==================================================')
+
+#%%
