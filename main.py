@@ -3,7 +3,7 @@ from src.pairs_trading_backtrader import PairTradingStrategy
 from src.pairs_trading_functions import find_cointegrated_pairs
 from src.load_data import fetch_crypto_data, fetch_data
 from binance import Client
-from src.api_key_secret import api_key, api_secret
+from src.api_key_secret import api_key, api_secret, path_zert
 import backtrader as bt
 
 
