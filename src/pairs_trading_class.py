@@ -333,6 +333,8 @@ class PairsTrading(bt.Strategy):
         self.window = self.params.window
         self.zscore = None
         self.spread_history = collections.deque(maxlen=self.params.window)
+        self.upper_bound = self.params.std_dev
+        self.lower_bound = -self.params.std_dev
 
         self.ols_slope = btind.OLS_Slope_InterceptN(self.data_a, self.data_b, period=self.params.window)
 
@@ -353,24 +355,19 @@ class PairsTrading(bt.Strategy):
         print((spread - spread_mean) / spread_std_dev)
 
 
-    #    y = self.data_a[0]
-    #    x = self.data_b[0]
-
-
-
-        #x = sm.add_constant(x)
-        #model = sm.OLS(y, x).fit()
-        #hedge_ratio = model.params[1]
-        #spread_ols = y[-1] - x[-1] * hedge_ratio
-        #print(x)
-
-
-
     def next(self):
-        #self.log('Close: ', self.data_a[0])
         self.calc_hedge_ratio()
 
+        if self.zscore is not None:
+            if self.zscore > self.upper_bound:
+                self.log("SELL {} - BUY {}: zscore {}".format(self.datas[0]._name, self.datas[1]._name, self.zscore))
+                self.sell(data=self.datas[0], size=1)
+                self.buy(data=self.datas[1], size=self.hedge_ratio)
 
+            elif self.zscore < self.lower_bound:
+                self.log("BUY {} - SELL {}: zscore {}".format(self.datas[0]._name, self.datas[1]._name, self.zscore))
+                self.buy(data=self.datas[0], size=1)
+                self.sell(data=self.datas[1], size=self.hedge_ratio)
 
 
 #%%
