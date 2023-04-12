@@ -194,7 +194,7 @@ import collections
 
 class PairsTrading(bt.Strategy):
     params = (
-        ("window", 30),
+        ("window", 168),
         ("std_dev", 1),
         ("size", 1000)
     )
@@ -236,36 +236,42 @@ class PairsTrading(bt.Strategy):
             if self.zscore < self.lower_bound:
                 # Buy the spread
                 self.log("BUY SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0]))
+                self.log("Z-SCORE: {}".format(self.zscore))
                 self.order_target_size(self.datas[0], self.size)
                 self.order_target_size(self.datas[1], -self.hedge_ratio * self.size)
             elif self.zscore > self.upper_bound:
                 # Sell the spread
                 self.log("SELL SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0]))
+                self.log("Z-SCORE: {}".format(self.zscore))
                 self.order_target_size(self.datas[0], -self.size)
                 self.order_target_size(self.datas[1], self.hedge_ratio * self.size)
 
         # If there is an open trade, wait until the zscore crosses zero
         elif self.position.size > 0 and self.zscore > 0:
             self.log("CLOSE LONG POSITION: A {} B {}".format(self.data_a[0], self.data_b[0]))
+            self.log("Z-SCORE: {}".format(self.zscore))
             self.order_target_size(self.datas[0], 0)
             self.order_target_size(self.datas[1], 0)
 
         elif self.position.size < 0 and self.zscore < 0:
             self.log("CLOSE SHORT POSITION: A {} B {}".format(self.data_a[0], self.data_b[0]))
+            self.log("Z-SCORE: {}".format(self.zscore))
             self.order_target_size(self.datas[0], 0)
             self.order_target_size(self.datas[1], 0)
 
 
 #%%
+# Z-Score is extremly volatil
+# increase hour window
 
 if __name__ == "__main__":
 
-    days = 30
+    days = 50
     cerebro = bt.Cerebro()
 
     client = Client(api_key,api_secret, {"verify": path_zert})
     #client.API_URL = 'https://testnet.binance.vision/api'
-    data = fetch_crypto_data(10, days, client)
+    data = fetch_crypto_data(20, days, client)
 
     pairs = find_cointegrated_pairs(data)
 
