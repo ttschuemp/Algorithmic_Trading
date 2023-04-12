@@ -413,7 +413,7 @@ if __name__ == "__main__":
     cerebro.addstrategy(PairsTrading)
 
     # Set the commission and the starting cash
-    cerebro.broker.setcommission(commission=0.001)
+    cerebro.broker.setcommission(commission=0.1)
     cerebro.broker.setcash(100000)
 
     # Run the backtest
