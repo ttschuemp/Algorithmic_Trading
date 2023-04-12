@@ -4,6 +4,7 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 import backtrader as bt
 import backtrader.indicators as btind
+import numpy as np
 import statsmodels.api as sm
 import statsmodels.tsa.stattools as ts
 
@@ -13,7 +14,7 @@ from src.load_data import fetch_crypto_data, fetch_data
 from binance import Client
 from src.api_key_secret import api_key, api_secret, path_zert
 
-
+#%%
 class PairTradingStrategy(bt.Strategy):
 
 
@@ -188,6 +189,7 @@ class PairTradingStrategy(bt.Strategy):
         print('==================================================')
 
 #%%
+
 import backtrader as bt
 import backtrader.indicators as btind
 import statsmodels.api as sm
@@ -302,7 +304,7 @@ class PairsTrading(bt.Strategy):
         self.upper_band = upper_band
         self.lower_band = lower_band
         self.hedge_ratio = hedge_ratio
-        print(len(z_spread))
+        print(z_spread[-1])
 
         # Sell spread if zscore is higher than upper bound
         if z_spread[-1] > upper_band[-1]:
@@ -315,6 +317,61 @@ class PairsTrading(bt.Strategy):
             self.sell(data=self.data_b)
 
 
+#%%
+import collections
+
+class PairsTrading(bt.Strategy):
+    params = (
+        ("window", 30),
+        ("std_dev", 1),
+    )
+
+    def __init__(self):
+        self.data_a = self.datas[0].close
+        self.data_b = self.datas[1].close
+        self.hedge_ratio = None
+        self.window = self.params.window
+        self.zscore = None
+        self.spread_history = collections.deque(maxlen=self.params.window)
+
+        self.ols_slope = btind.OLS_Slope_InterceptN(self.data_a, self.data_b, period=self.params.window)
+
+    def log(self, txt, dt=None):
+        dt = dt or self.datas[0].datetime.date(0)
+        print(f'{dt.isoformat()} {txt}')
+
+
+    def calc_hedge_ratio(self):
+
+        hedge_ratio = self.ols_slope.slope[0]
+        spread = self.data_a[0] - (hedge_ratio * self.data_b[0])
+        self.spread_history.append(spread)
+        spread_mean = pd.Series(self.spread_history).rolling(self.params.window).mean().iloc[-1]
+        spread_std_dev = pd.Series(self.spread_history).rolling(self.params.window).std().iloc[-1]
+        self.zscore = (spread - spread_mean) / spread_std_dev
+
+        print((spread - spread_mean) / spread_std_dev)
+
+
+    #    y = self.data_a[0]
+    #    x = self.data_b[0]
+
+
+
+        #x = sm.add_constant(x)
+        #model = sm.OLS(y, x).fit()
+        #hedge_ratio = model.params[1]
+        #spread_ols = y[-1] - x[-1] * hedge_ratio
+        #print(x)
+
+
+
+    def next(self):
+        #self.log('Close: ', self.data_a[0])
+        self.calc_hedge_ratio()
+
+
+
 
 #%%
 
@@ -325,7 +382,7 @@ if __name__ == "__main__":
 
     client = Client(api_key,api_secret, {"verify": path_zert})
     #client.API_URL = 'https://testnet.binance.vision/api'
-    data = fetch_crypto_data(5, days, client)
+    data = fetch_crypto_data(10, days, client)
 
     pairs = find_cointegrated_pairs(data)
 
@@ -355,5 +412,13 @@ if __name__ == "__main__":
     portvalue = cerebro.broker.getvalue()
     print("Final Portfolio Value: ${}".format(round(portvalue, 2)))
 
-
 #%%
+
+
+
+
+
+
+
+
+
