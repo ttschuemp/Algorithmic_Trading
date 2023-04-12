@@ -388,7 +388,7 @@ class PairsTrading(bt.Strategy):
 
 if __name__ == "__main__":
 
-    days = 10
+    days = 30
     cerebro = bt.Cerebro()
 
     client = Client(api_key,api_secret, {"verify": path_zert})
