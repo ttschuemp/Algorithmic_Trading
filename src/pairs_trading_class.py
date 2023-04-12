@@ -340,11 +340,6 @@ class PairsTrading(bt.Strategy):
 
         self.ols_slope = btind.OLS_Slope_InterceptN(self.data_a, self.data_b, period=self.params.window)
 
-    def log(self, txt, dt=None):
-        dt = dt or self.datas[0].datetime.date(0)
-        print(f'{dt.isoformat()} {txt}')
-
-
     def calc_hedge_ratio(self):
 
         hedge_ratio = self.ols_slope.slope[0]
@@ -353,7 +348,7 @@ class PairsTrading(bt.Strategy):
         spread_mean = pd.Series(self.spread_history).rolling(self.params.window).mean().iloc[-1]
         spread_std_dev = pd.Series(self.spread_history).rolling(self.params.window).std().iloc[-1]
         self.zscore = (spread - spread_mean) / spread_std_dev
-
+        self.hedge_ratio = hedge_ratio
         #print((spread - spread_mean) / spread_std_dev)
 
 
@@ -369,7 +364,7 @@ class PairsTrading(bt.Strategy):
                 self.order_target_size(self.datas[1], -self.hedge_ratio * self.size)
             elif self.zscore > self.upper_bound:
                 # Sell the spread
-                self.log("SELL SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0]))
+                #self.log("SELL SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0]))
                 self.order_target_size(self.datas[0], -self.size)
                 self.order_target_size(self.datas[1], self.hedge_ratio * self.size)
 
