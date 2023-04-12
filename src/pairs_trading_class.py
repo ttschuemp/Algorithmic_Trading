@@ -324,7 +324,7 @@ class PairsTrading(bt.Strategy):
     params = (
         ("window", 30),
         ("std_dev", 1),
-        ("size", 1)
+        ("size", 1000)
     )
 
     def __init__(self):
@@ -399,6 +399,7 @@ if __name__ == "__main__":
 
     # choose pair wits smallest p-value in pairs
     tickers_pairs = pairs.iloc[0,0:2]
+    print(tickers_pairs)
 
     # get data for pair
     data_df0 = fetch_data(tickers_pairs[0], '1h', str(days * 24), client)
@@ -416,12 +417,25 @@ if __name__ == "__main__":
     cerebro.broker.setcommission(commission=0.1)
     cerebro.broker.setcash(100000)
 
+    cerebro.addanalyzer(bt.analyzers.TradeAnalyzer, _name='trade_analyzer')
+    cerebro.addanalyzer(bt.analyzers.Returns, _name='returns')
+    cerebro.addanalyzer(bt.analyzers.DrawDown, _name='drawdown')
+    cerebro.addanalyzer(bt.analyzers.SQN, _name='sqn')
+
     # Run the backtest
-    cerebro.run()
+    results = cerebro.run()
 
     # Print the final portfolio value
     portvalue = cerebro.broker.getvalue()
     print("Final Portfolio Value: ${}".format(round(portvalue, 2)))
+
+    # Print some performance metrics
+    print("Sharpe Ratio:", results[0].analyzers.returns.get_analysis()['rnorm'])
+    print("Total Trades:", results[0].analyzers.trade_analyzer.get_analysis()['total'])
+    print("Winning Trades:", results[0].analyzers.trade_analyzer.get_analysis()['won'])
+    print("Losing Trades:", results[0].analyzers.trade_analyzer.get_analysis()['lost'])
+    print("Drawdown:", results[0].analyzers.drawdown.get_analysis()['max']['drawdown'])
+    print("SQN:", results[0].analyzers.sqn.get_analysis()['sqn'])
 
 #%%
 
