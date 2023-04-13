@@ -6,7 +6,12 @@ import backtrader as bt
 import backtrader.indicators as btind
 import statsmodels.api as sm
 import statsmodels.tsa.stattools as ts
-
+import pandas as pd
+from src.pairs_trading_backtrader import PairTradingStrategy
+from src.pairs_trading_functions import find_cointegrated_pairs
+from src.load_data import fetch_crypto_data, fetch_data
+from binance import Client
+from src.api_key_secret import api_key, api_secret, path_zert
 
 
 
