@@ -98,7 +98,7 @@ class PairsTrading(bt.Strategy):
 #%%
 # Z-Score is extremly volatil
 # increase hour window
-
+from backtrader.analyzers import tradeanalyzer
 
 if __name__ == "__main__":
     days = 90
@@ -125,7 +125,7 @@ if __name__ == "__main__":
     cerebro.addstrategy(PairsTrading)
 
     # Set the commission and the starting cash
-    cerebro.broker.setcommission(commission=0.1)
+    cerebro.broker.setcommission(commission=0.001)
     cerebro.broker.setcash(100000)
 
     # Add analyzers
@@ -141,11 +141,12 @@ if __name__ == "__main__":
 
     # Get the analyzers and print the results
     trade_analyzer = results[0].analyzers.trade_analyzer.get_analysis()
-    print("Number of trades: {}".format(trade_analyzer.total.closed))
     print("Starting cash: ${}".format(cerebro.broker.startingcash))
     print("Ending cash: ${}".format(cerebro.broker.getvalue()))
-    print("Total return: {:.2f}%".format(100*(cerebro.broker.getvalue()/cerebro.broker.startingcash - 1)))
-    print("Sharpe ratio: {:.2f}".format(results[0].analyzers.mysharpe.get_analysis()['sharperatio']))
+    print("Total return: {:.2f}%".format(100*(cerebro.broker.getvalue()/cerebro.broker.startingcash)))
+    print("Number of trades: {}".format(trade_analyzer.total.closed))
+    print("Winning Trades:", results[0].analyzers.trade_analyzer.get_analysis()['won'])
+    print("Losing Trades:", results[0].analyzers.trade_analyzer.get_analysis()['lost'])
 
     # Get the strategy instance
     strategy_instance = results[0]
@@ -154,7 +155,6 @@ if __name__ == "__main__":
     plt.subplot(3, 1, 1)
     plt.plot(strategy_instance.spread_history_full)
     plt.title("Spread")
-    plt.legend([tickers_pairs[0], tickers_pairs[1]])
 
     plt.subplot(3, 1, 2)
     plt.plot(strategy_instance.zscore_history)
@@ -168,13 +168,7 @@ if __name__ == "__main__":
     plt.title("Hedge ratio")
     plt.legend(["Hedge ratio"])
 
+    plt.tight_layout()
     plt.show()
 
 #%%
-
-
-
-
-
-
-
