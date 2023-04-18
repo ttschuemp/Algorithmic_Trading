@@ -111,7 +111,7 @@ if __name__ == "__main__":
     pairs = find_cointegrated_pairs(data)
 
     # Choose the pair with the smallest p-value
-    tickers_pairs = pairs.iloc[3, 0:2]
+    tickers_pairs = pairs.iloc[0, 0:2]
     print(f'trading pair: ' + str(tickers_pairs))
 
     # Fetch data for the chosen pair
