@@ -7,6 +7,7 @@ import backtrader.indicators as btind
 import numpy as np
 import statsmodels.api as sm
 import statsmodels.tsa.stattools as ts
+import quantstats
 import collections
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -83,13 +84,13 @@ class PairsTrading(bt.Strategy):
 
         # If there is an open trade, wait until the zscore crosses zero
         elif self.position.size > 0 and self.zscore > 0:
-            self.log("CLOSE LONG POSITION: A {} B {}".format(self.data_a[0], self.data_b[0]))
+            self.log("CLOSE LONG SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0]))
             self.log("Z-SCORE: {}".format(self.zscore))
             self.order_target_size(self.datas[0], 0)
             self.order_target_size(self.datas[1], 0)
 
         elif self.position.size < 0 and self.zscore < 0:
-            self.log("CLOSE SHORT POSITION: A {} B {}".format(self.data_a[0], self.data_b[0]))
+            self.log("CLOSE SHORT SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0]))
             self.log("Z-SCORE: {}".format(self.zscore))
             self.order_target_size(self.datas[0], 0)
             self.order_target_size(self.datas[1], 0)
@@ -105,12 +106,12 @@ if __name__ == "__main__":
     cerebro = bt.Cerebro()
 
     # Fetch data and find cointegrated pairs
-    client = Client(api_key, api_secret, {"verify": path_zert})
+    client = Client(api_key, api_secret)
     data = fetch_crypto_data(20, days, client)
     pairs = find_cointegrated_pairs(data)
 
     # Choose the pair with the smallest p-value
-    tickers_pairs = pairs.iloc[0, 0:2]
+    tickers_pairs = pairs.iloc[3, 0:2]
     print(f'trading pair: ' + str(tickers_pairs))
 
     # Fetch data for the chosen pair
@@ -130,7 +131,7 @@ if __name__ == "__main__":
 
     # Add analyzers
     cerebro.addanalyzer(bt.analyzers.TradeAnalyzer, _name='trade_analyzer')
-    cerebro.addanalyzer(bt.analyzers.SharpeRatio, _name='mysharpe')
+    cerebro.addanalyzer(bt.analyzers.PyFolio, _name='PyFolio')
 
     # Run the backtest
     results = cerebro.run()
@@ -143,7 +144,7 @@ if __name__ == "__main__":
     trade_analyzer = results[0].analyzers.trade_analyzer.get_analysis()
     print("Starting cash: ${}".format(cerebro.broker.startingcash))
     print("Ending cash: ${}".format(cerebro.broker.getvalue()))
-    print("Total return: {:.2f}%".format(100*(cerebro.broker.getvalue()/cerebro.broker.startingcash)))
+    print("Total return: {:.2f}%".format(100*((cerebro.broker.getvalue()/cerebro.broker.startingcash)-1)))
     print("Number of trades: {}".format(trade_analyzer.total.closed))
     print("Winning Trades:", results[0].analyzers.trade_analyzer.get_analysis()['won'])
     print("Losing Trades:", results[0].analyzers.trade_analyzer.get_analysis()['lost'])
@@ -151,10 +152,18 @@ if __name__ == "__main__":
     # Get the strategy instance
     strategy_instance = results[0]
 
+    # create quantstats charts & statistics html
+    portfolio_stats = strategy_instance.analyzers.getbyname('PyFolio')
+    returns, positions, transactions, gross_lev = portfolio_stats.get_pf_items()
+    returns.index = returns.index.tz_convert(None)
+
+    quantstats.reports.html(returns, output='stats.html', title='BTC Sentiment')
+
+
     # Plot the spread, zscore, and hedge ratio
     plt.subplot(3, 1, 1)
     plt.plot(strategy_instance.spread_history_full)
-    plt.title("Spread")
+    plt.title(f'Spread {list(tickers_pairs)}')
 
     plt.subplot(3, 1, 2)
     plt.plot(strategy_instance.zscore_history)
@@ -170,6 +179,14 @@ if __name__ == "__main__":
 
     plt.tight_layout()
     plt.show()
+
+    # create cerebro chart
+    cerebro.plot(iplot=True, volume=False)
+
+
+#%%
+
+
 
 
 
