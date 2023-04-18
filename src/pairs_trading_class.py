@@ -95,6 +95,7 @@ class PairsTrading(bt.Strategy):
             self.order_target_size(self.datas[1], 0)
 
 
+
 #%%
 # Z-Score is extremly volatil
 # increase hour window
@@ -105,7 +106,7 @@ if __name__ == "__main__":
     cerebro = bt.Cerebro()
 
     # Fetch data and find cointegrated pairs
-    client = Client(api_key, api_secret, {"verify": path_zert})
+    client = Client(api_key, api_secret)
     data = fetch_crypto_data(20, days, client)
     pairs = find_cointegrated_pairs(data)
 
