@@ -66,4 +66,5 @@ def fetch_crypto_data(top_n, days, client):
     return pd.concat(df_list, axis=1)
 
 
+
 #%%
