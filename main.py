@@ -1,19 +1,19 @@
 import pandas as pd
 from src.pairs_trading_backtrader import PairTradingStrategy
-from src.test_strategy_backtrader import MyStrategy
 from src.pairs_trading_functions import find_cointegrated_pairs
 from src.load_data import fetch_crypto_data, fetch_data
 from binance import Client
-from api_key_secret import api_key, api_secret
+from src.api_key_secret import api_key, api_secret, path_zert
 import backtrader as bt
+
 
 if __name__ == "__main__":
 
     cerebro = bt.Cerebro()
 
-    client = Client(api_key,api_secret)
+    client = Client(api_key,api_secret, {"verify": path_zert})
     client.API_URL = 'https://testnet.binance.vision/api'
-    data = fetch_crypto_data(10, 2, client)
+    data = fetch_crypto_data(50, 90, client)
 
     pairs = find_cointegrated_pairs(data)
 
@@ -80,3 +80,5 @@ if __name__ == "__main__":
     
     # Plot if requested
     #cerebro.plot(volume=False, zdown=False)
+
+#%%

@@ -28,7 +28,6 @@ def fetch_crypto_data(top_n, days, client):
     response = requests.get(f"https://api.coingecko.com/api/v3/coins/"
                             f"markets?vs_currency=usd&order=market_cap_desc&per_page={top_n}&"
                             f"page=1&sparkline=false&price_change_percentage=24h"
-                            #, verify="C:\DevLab\Zscaler Zertifikat.cer"
                             )
     top_cryptos = response.json()
 
@@ -66,3 +65,6 @@ def fetch_crypto_data(top_n, days, client):
 
     return pd.concat(df_list, axis=1)
 
+
+
+#%%
