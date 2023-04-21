@@ -27,7 +27,7 @@ def fetch_crypto_data(top_n, days, client):
     # Get the top N cryptocurrencies by market cap from CoinGecko API
     response = requests.get(f"https://api.coingecko.com/api/v3/coins/"
                             f"markets?vs_currency=usd&order=market_cap_desc&per_page={top_n}&"
-                            f"page=1&sparkline=false&price_change_percentage=24h", verify= "C:\DevLab\cert2.crt"
+                            f"page=1&sparkline=false&price_change_percentage=24h"
                             )
     top_cryptos = response.json()
 
