@@ -76,7 +76,6 @@ def hurst(df_series):
     # Return the Hurst exponent from the polyfit output
     return poly[0] * 2
 
-
 def calc_dynamic_hedge_ratio_ols(data, window):
     """
     Calculates rolling hedge ratio using OLS

@@ -11,7 +11,7 @@ import quantstats
 import collections
 import matplotlib.pyplot as plt
 import pandas as pd
-from src.pairs_trading_functions import find_cointegrated_pairs
+from src.pairs_trading_functions import find_cointegrated_pairs, hurst
 from src.load_data import fetch_crypto_data, fetch_data
 from binance import Client
 from src.api_key_secret import api_key, api_secret, path_zert
@@ -20,9 +20,9 @@ from src.api_key_secret import api_key, api_secret, path_zert
 
 class PairsTrading(bt.Strategy):
     params = (
-        ("window", 168),
-        ("std_dev", 1),
-        ("size", 1000)
+        ("window", window),
+        ("std_dev", std_dev),
+        ("size", size)
     )
 
     def __init__(self):
@@ -35,6 +35,8 @@ class PairsTrading(bt.Strategy):
         self.upper_bound = self.params.std_dev
         self.lower_bound = -self.params.std_dev
         self.size = self.params.size
+        self.trade_size = 0
+        self.equity = None
 
         self.spread_history_full = []
         self.zscore_history = []
@@ -45,6 +47,7 @@ class PairsTrading(bt.Strategy):
     def log(self, txt, dt=None):
         dt = dt or self.datas[0].datetime.date(0)
         print("{} {}".format(dt.isoformat(), txt))
+
 
     def calc_hedge_ratio(self):
 
@@ -61,45 +64,58 @@ class PairsTrading(bt.Strategy):
         self.zscore_history.append(self.zscore)
         self.hedge_ratio_history.append(hedge_ratio)
 
-        #print(f'zscore: ' +str((spread - spread_mean) / spread_std_dev))
+
+    def start(self):
+        self.equity = self.broker.get_cash()
 
 
     def next(self):
+
+        self.equity = self.broker.get_value()
+        self.trade_size = self.equity * self.params.size / self.data_a[0]
         self.calc_hedge_ratio()
 
         # Check if there is already an open trade
-        if self.position.size == 0:
+        if self.getposition().size == 0:
             if self.zscore < self.lower_bound:
                 # Buy the spread
                 self.log("BUY SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0]))
                 self.log("Z-SCORE: {}".format(self.zscore))
-                self.order_target_size(self.datas[0], self.size)
-                self.order_target_size(self.datas[1], -self.hedge_ratio * self.size)
+                self.log("Portfolio Value: {}".format(self.equity))
+                self.order_target_size(self.datas[0], self.trade_size)
+                self.order_target_size(self.datas[1], -self.hedge_ratio * self.trade_size)
+
             elif self.zscore > self.upper_bound:
                 # Sell the spread
                 self.log("SELL SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0]))
                 self.log("Z-SCORE: {}".format(self.zscore))
-                self.order_target_size(self.datas[0], -self.size)
-                self.order_target_size(self.datas[1], self.hedge_ratio * self.size)
+                self.log("Portfolio Value: {}".format(self.equity))
+                self.order_target_size(self.datas[0], -self.trade_size)
+                self.order_target_size(self.datas[1], self.hedge_ratio * self.trade_size)
+
 
         # If there is an open trade, wait until the zscore crosses zero
-        elif self.position.size > 0 and self.zscore > 0:
+        elif self.getposition().size > 0 and self.zscore > 0:
             self.log("CLOSE LONG SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0]))
             self.log("Z-SCORE: {}".format(self.zscore))
+            self.log("Portfolio Value: {}".format(self.equity))
             self.order_target_size(self.datas[0], 0)
             self.order_target_size(self.datas[1], 0)
 
-        elif self.position.size < 0 and self.zscore < 0:
+
+        elif self.getposition().size < 0 and self.zscore < 0:
             self.log("CLOSE SHORT SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0]))
             self.log("Z-SCORE: {}".format(self.zscore))
+            self.log("Portfolio Value: {}".format(self.equity))
             self.order_target_size(self.datas[0], 0)
             self.order_target_size(self.datas[1], 0)
+
 
 
 #%%
-# Z-Score is extremly volatil
-# increase hour window
-from backtrader.analyzers import tradeanalyzer
+
+# check in next if cointegration is still valide
+# if not are decying -> look for new coointegrated pairs
 
 if __name__ == "__main__":
     days = 90
@@ -108,7 +124,12 @@ if __name__ == "__main__":
     # Fetch data and find cointegrated pairs
     client = Client(api_key, api_secret)
     data = fetch_crypto_data(20, days, client)
-    pairs = find_cointegrated_pairs(data)
+    pairs = find_cointegrated_pairs_2(data)
+    hurst =
+
+    window = int(pairs.iloc[0,-1])
+    std_dev = 1
+    size = 0.01
 
     # Choose the pair with the smallest p-value
     tickers_pairs = pairs.iloc[0, 0:2]
@@ -123,7 +144,7 @@ if __name__ == "__main__":
     cerebro.adddata(data1)
 
     # Add the strategy
-    cerebro.addstrategy(PairsTrading)
+    cerebro.addstrategy(PairsTrading, window=window, std_dev=std_dev, size=size)
 
     # Set the commission and the starting cash
     cerebro.broker.setcommission(commission=0.001)
@@ -145,20 +166,13 @@ if __name__ == "__main__":
     print("Starting cash: ${}".format(cerebro.broker.startingcash))
     print("Ending cash: ${}".format(cerebro.broker.getvalue()))
     print("Total return: {:.2f}%".format(100*((cerebro.broker.getvalue()/cerebro.broker.startingcash)-1)))
+    print("Half-Live: " + str(int(pairs.iloc[0,-1])) + " hours")
     print("Number of trades: {}".format(trade_analyzer.total.closed))
-    print("Winning Trades:", results[0].analyzers.trade_analyzer.get_analysis()['won'])
-    print("Losing Trades:", results[0].analyzers.trade_analyzer.get_analysis()['lost'])
+    print("Winning Trades:", results[0].analyzers.trade_analyzer.get_analysis()['won']['total'])
+    print("Losing Trades:", results[0].analyzers.trade_analyzer.get_analysis()['lost']['total'])
 
     # Get the strategy instance
     strategy_instance = results[0]
-
-    # create quantstats charts & statistics html
-    portfolio_stats = strategy_instance.analyzers.getbyname('PyFolio')
-    returns, positions, transactions, gross_lev = portfolio_stats.get_pf_items()
-    returns.index = returns.index.tz_convert(None)
-
-    quantstats.reports.html(returns, output='stats.html', title='BTC Sentiment')
-
 
     # Plot the spread, zscore, and hedge ratio
     plt.subplot(3, 1, 1)
@@ -183,11 +197,58 @@ if __name__ == "__main__":
     # create cerebro chart
     cerebro.plot(iplot=True, volume=False)
 
+    # create quantstats charts & statistics html
+    portfolio_stats = strategy_instance.analyzers.getbyname('PyFolio')
+    returns, positions, transactions, gross_lev = portfolio_stats.get_pf_items()
+    returns.index = returns.index.tz_convert(None)
+
+    quantstats.reports.html(returns, output='stats.html', title='Backtrade Pairs')
+
 
 #%%
 
+def find_cointegrated_pairs_2(data):
+    ''' find from a list cointegrated pairs'''
+    n = data.shape[1]
+    keys = data.keys()
+    pvalue_matrix = np.ones((n, n))
+    pairs = []
+
+    # Loop through each combination of assets
+    for i in range(n):
+        for j in range(i+1, n):
+            S1 = pd.to_numeric(data[keys[i]])
+            S2 = pd.to_numeric(data[keys[j]])
+
+            # Test for cointegration
+            result = ts.coint(S1, S2)
+            pvalue = result[1]
+
+            # Store p-value in matrix
+            pvalue_matrix[i, j] = pvalue
+
+            # Add cointegrated pair to list (if p-value is less than 0.05)
+            if pvalue < 0.05:
+
+                model = sm.OLS(S1, S2)
+                results = model.fit()
+                hedgeRatio = results.params
+                z = S1 - hedgeRatio[0] * S2
+                prevz = z.shift()
+                dz = z-prevz
+                dz = dz[1:,]
+                prevz = prevz[1:,]
+                model2 = sm.OLS(dz, prevz-np.mean(prevz))
+                results2 = model2.fit()
+                theta = results2.params
+                half_life = -np.log(2)/theta
 
 
+                pairs.append((keys[i], keys[j], pvalue, half_life.values))
 
+    # Sort cointegrated pairs by p-value in ascending order
+    pairs.sort(key=lambda x: x[2])
+
+    return pd.DataFrame(pairs, columns=['Asset 1', 'Asset 2', 'P-value', 'Half Life'])
 
 #%%
