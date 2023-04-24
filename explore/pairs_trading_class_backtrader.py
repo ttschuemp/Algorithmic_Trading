@@ -69,7 +69,7 @@ class PairsTrading(bt.Strategy):
 
         # calc hurst exponent
         if len(self.spread_history) >= self.params.window:
-            lags = range(2, 500)
+            lags = range(2, self.params.window // 2)
 
             # Calculate the array of the variances of the lagged differences
             tau = [np.sqrt(np.abs(pd.Series(self.spread_history) - pd.Series(self.spread_history).shift(lag)).dropna().var()) for lag in lags]
@@ -143,7 +143,7 @@ class PairsTrading(bt.Strategy):
 # if not are decying -> look for new coointegrated pairs
 
 if __name__ == "__main__":
-    days = 90
+    days = 180
     cerebro = bt.Cerebro()
 
     # Fetch data and find cointegrated pairs
@@ -151,8 +151,8 @@ if __name__ == "__main__":
     data = fetch_crypto_data(20, days, client)
     pairs = find_cointegrated_pairs_2(data)
 
-    #window = int(pairs.iloc[0,-1])
-    window = 1000
+    window = int(pairs.iloc[0,-1])
+    #window = 1000
     std_dev = 1
     size = 0.01
 
