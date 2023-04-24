@@ -11,18 +11,21 @@ import quantstats
 import collections
 import matplotlib.pyplot as plt
 import pandas as pd
-from src.pairs_trading_functions import find_cointegrated_pairs, hurst
 from src.load_data import fetch_crypto_data, fetch_data
+from src.pairs_trading_functions import*
 from binance import Client
 from src.api_key_secret import api_key, api_secret, path_zert
 
 #%%
 
+from backtrader.indicators.hurst import Hurst
+
+
 class PairsTrading(bt.Strategy):
     params = (
-        ("window", window),
-        ("std_dev", std_dev),
-        ("size", size)
+        ("window", None),
+        ("std_dev", None),
+        ("size", None)
     )
 
     def __init__(self):
@@ -43,7 +46,7 @@ class PairsTrading(bt.Strategy):
         self.hedge_ratio_history = []
 
         self.ols_slope = btind.OLS_Slope_InterceptN(self.data_a, self.data_b, period=self.params.window)
-
+        self.hurst_exponent = None
     def log(self, txt, dt=None):
         dt = dt or self.datas[0].datetime.date(0)
         print("{} {}".format(dt.isoformat(), txt))
@@ -64,6 +67,19 @@ class PairsTrading(bt.Strategy):
         self.zscore_history.append(self.zscore)
         self.hedge_ratio_history.append(hedge_ratio)
 
+        # calc hurst exponent
+        if len(self.spread_history) >= self.params.window:
+            lags = range(2, 500)
+
+            # Calculate the array of the variances of the lagged differences
+            tau = [np.sqrt(np.abs(pd.Series(self.spread_history) - pd.Series(self.spread_history).shift(lag)).dropna().var()) for lag in lags]
+
+            # Use a linear fit to estimate the Hurst Exponent
+            poly = np.polyfit(np.log(lags), np.log(tau), 1)
+            self.hurst_exponent = poly[0] * 2
+
+
+
 
     def start(self):
         self.equity = self.broker.get_cash()
@@ -74,6 +90,15 @@ class PairsTrading(bt.Strategy):
         self.equity = self.broker.get_value()
         self.trade_size = self.equity * self.params.size / self.data_a[0]
         self.calc_hedge_ratio()
+        print("Hurst: " + str(self.hurst_exponent))
+
+        #if len(self.spread_history) > self.params.window:
+            #hurst = hurst_2(pd.Series(self.spread_history)[-self.params.window:])
+            #print(hurst)
+        #self.hurst(self.spread_history[-self.params.window:])
+        #self.log("Hurst: {}".format(self.hurst[0][-1]))
+        #self.hurst = hurst_2(pd.Series(self.spread_history_full[-self.params.window:]))
+        #print(self.hurst)
 
         # Check if there is already an open trade
         if self.getposition().size == 0:
@@ -125,9 +150,9 @@ if __name__ == "__main__":
     client = Client(api_key, api_secret)
     data = fetch_crypto_data(20, days, client)
     pairs = find_cointegrated_pairs_2(data)
-    hurst =
 
-    window = int(pairs.iloc[0,-1])
+    #window = int(pairs.iloc[0,-1])
+    window = 1000
     std_dev = 1
     size = 0.01
 
@@ -250,5 +275,31 @@ def find_cointegrated_pairs_2(data):
     pairs.sort(key=lambda x: x[2])
 
     return pd.DataFrame(pairs, columns=['Asset 1', 'Asset 2', 'P-value', 'Half Life'])
+
+
+def hurst_2(df_series):
+    """Returns the Hurst exponent of the time series vector ts"""
+    # df_series = df_series if not isinstance(df_series, pd.Series) else df_series.to_list()
+    # Create the range of lag values
+    lags = range(2, 10)
+
+    # Calculate the array of the variances of the lagged differences
+    tau = [np.sqrt((df_series - df_series.shift(-lag)).std()) for lag in lags]
+
+    # Use a linear fit to estimate the Hurst Exponent
+    poly = np.polyfit(np.log(lags), np.log(tau), 1)
+
+    # Return the Hurst exponent from the polyfit output
+    return poly[0] * 2
+
+#%%
+
+window = 10
+
+test2 = hurst_2(pd.Series(strategy_instance.spread_history_full)[-window:])
+
+
+
+#%%
 
 #%%
