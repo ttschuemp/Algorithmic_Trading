@@ -27,8 +27,8 @@ def find_cointegrated_pairs(data):
     # Loop through each combination of assets
     for i in range(n):
         for j in range(i+1, n):
-            S1 = data[keys[i]]
-            S2 = data[keys[j]]
+            S1 = pd.to_numeric(data[keys[i]])
+            S2 = pd.to_numeric(data[keys[j]])
 
             # Test for cointegration
             result = ts.coint(S1, S2)
@@ -39,12 +39,42 @@ def find_cointegrated_pairs(data):
 
             # Add cointegrated pair to list (if p-value is less than 0.05)
             if pvalue < 0.05:
-                pairs.append((keys[i], keys[j], pvalue))
+
+                model = sm.OLS(S1, S2)
+                results = model.fit()
+                hedgeRatio = results.params
+                z = S1 - hedgeRatio[0] * S2
+                prevz = z.shift()
+                dz = z-prevz
+                dz = dz[1:,]
+                prevz = prevz[1:,]
+                model2 = sm.OLS(dz, prevz-np.mean(prevz))
+                results2 = model2.fit()
+                theta = results2.params
+                half_life = -np.log(2)/theta
+
+
+                pairs.append((keys[i], keys[j], pvalue, half_life.values))
 
     # Sort cointegrated pairs by p-value in ascending order
     pairs.sort(key=lambda x: x[2])
 
-    return pd.DataFrame(pairs)
+    return pd.DataFrame(pairs, columns=['Asset 1', 'Asset 2', 'P-value', 'Half Life'])
+
+def hurst(df_series):
+    """Returns the Hurst exponent of the time series vector ts"""
+    # df_series = df_series if not isinstance(df_series, pd.Series) else df_series.to_list()
+    # Create the range of lag values
+    lags = range(2, 100)
+
+    # Calculate the array of the variances of the lagged differences
+    tau = tau = [np.sqrt((df_series - df_series.shift(-lag)).std()) for lag in lags]
+
+    # Use a linear fit to estimate the Hurst Exponent
+    poly = np.polyfit(np.log(lags), np.log(tau), 1)
+
+    # Return the Hurst exponent from the polyfit output
+    return poly[0] * 2
 
 
 def calc_dynamic_hedge_ratio_ols(data, window):
@@ -115,3 +145,5 @@ def dynamic_trading_strategy_pairs_backtest(data, window, std_dev):
     plt.plot(np.cumsum(pnl))
     print(sharpe_ratio)
 
+
+#%%
