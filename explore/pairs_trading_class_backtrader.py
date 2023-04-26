@@ -140,7 +140,7 @@ class PairsTrading(bt.Strategy):
 # ADF with trades most of time pvalue >0.05 -> non stationary. mean spread we trade is not stationary
 
 if __name__ == "__main__":
-    days = 180
+    days = 90
     cerebro = bt.Cerebro()
 
     # Fetch data and find cointegrated pairs
@@ -281,32 +281,5 @@ def find_cointegrated_pairs_2(data):
 
     return pd.DataFrame(pairs, columns=['Asset 1', 'Asset 2', 'P-value', 'Half Life', 'Hurst'])
 
-
-def hurst_2(df_series):
-    """Returns the Hurst exponent of the time series vector ts"""
-    # df_series = df_series if not isinstance(df_series, pd.Series) else df_series.to_list()
-    # Create the range of lag values
-    lags = range(2, 10)
-
-    # Calculate the array of the variances of the lagged differences
-    tau = [np.sqrt((df_series - df_series.shift(-lag)).std()) for lag in lags]
-
-    # Use a linear fit to estimate the Hurst Exponent
-    poly = np.polyfit(np.log(lags), np.log(tau), 1)
-
-    # Return the Hurst exponent from the polyfit output
-    return poly[0] * 2
-
-#%%
-
-window = 10
-
-test2 = hurst_2(pd.Series(strategy_instance.spread_history_full)[-window:])
-
-tau = [np.sqrt(np.abs(pd.Series(self.spread_history) - pd.Series(self.spread_history).shift(lag)).dropna().var()) for lag in lags]
-
-# Use a linear fit to estimate the Hurst Exponent
-poly = np.polyfit(np.log(lags), np.log(tau), 1)
-self.hurst_exponent = poly[0] * 2
 
 #%%
