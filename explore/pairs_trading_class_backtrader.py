@@ -11,50 +11,53 @@ import quantstats
 import collections
 import matplotlib.pyplot as plt
 import pandas as pd
-from src.pairs_trading_functions import find_cointegrated_pairs
+from statsmodels.tsa.stattools import adfuller
 from src.load_data import fetch_crypto_data, fetch_data
+from src.pairs_trading_functions import*
 from binance import Client
 from src.api_key_secret import api_key, api_secret, path_zert
 
-
 #%%
 
+
 class PairsTrading(bt.Strategy):
-   """ params = (
-        ("window", 120),
-        ("std_dev", 1),
-        ("size", 10000)
+    params = (
+        ("window", None),
+        ("std_dev", None),
+        ("size", None)
     )
-"""
-    def __init__(self, window, std_dev, size):
+
+    def __init__(self):
         self.data_a = self.datas[0].close
         self.data_b = self.datas[1].close
         self.hedge_ratio = None
-        self.window = window
+        self.window = self.params.window
         self.zscore = None
-        self.spread_history = collections.deque(maxlen=self.window)
-        self.upper_bound = std_dev
-        self.lower_bound = -std_dev
-        self.size = size
+        self.spread_history = collections.deque(maxlen=self.params.window)
+        self.upper_bound = self.params.std_dev
+        self.lower_bound = -self.params.std_dev
+        self.size = self.params.size
+        self.trade_size = 0
+        self.equity = None
 
         self.spread_history_full = []
         self.zscore_history = []
         self.hedge_ratio_history = []
 
-        self.ols_slope = btind.OLS_Slope_InterceptN(self.data_a, self.data_b, period=self.window)
-
+        self.ols_slope = btind.OLS_Slope_InterceptN(self.data_a, self.data_b, period=self.params.window)
+        self.hurst_exponent = None
     def log(self, txt, dt=None):
         dt = dt or self.datas[0].datetime.date(0)
         print("{} {}".format(dt.isoformat(), txt))
+
 
     def calc_hedge_ratio(self):
 
         hedge_ratio = self.ols_slope.slope[0]
         spread = self.data_a[0] - (hedge_ratio * self.data_b[0])
-        #print(f'spread: ' +str(spread))
         self.spread_history.append(spread)
-        spread_mean = pd.Series(self.spread_history).rolling(self.window).mean().iloc[-1]
-        spread_std_dev = pd.Series(self.spread_history).rolling(self.window).std().iloc[-1]
+        spread_mean = pd.Series(self.spread_history).rolling(self.params.window).mean().iloc[-1]
+        spread_std_dev = pd.Series(self.spread_history).rolling(self.params.window).std().iloc[-1]
         self.zscore = (spread - spread_mean) / spread_std_dev
         self.hedge_ratio = hedge_ratio
 
@@ -62,58 +65,82 @@ class PairsTrading(bt.Strategy):
         self.zscore_history.append(self.zscore)
         self.hedge_ratio_history.append(hedge_ratio)
 
-        #print(f'zscore: ' +str((spread - spread_mean) / spread_std_dev))
+        # calc hurst exponent
+        if len(self.spread_history) >= self.params.window:
+
+            #if adfuller(self.spread_history)[1] <= 0.1:
+                lags = range(2, self.params.window // 2)
+
+                # Calculate the array of the variances of the lagged differences
+                tau = [np.sqrt(np.abs(pd.Series(self.spread_history) - pd.Series(self.spread_history).shift(lag)).dropna().var()) for lag in lags]
+
+                # Use a linear fit to estimate the Hurst Exponent
+                poly = np.polyfit(np.log(lags), np.log(tau), 1)
+                self.hurst_exponent = poly[0] * 2
+
+
+
+
+    def start(self):
+        self.equity = self.broker.get_cash()
 
 
     def next(self):
+
+        self.equity = self.broker.get_value()
+        self.trade_size = self.equity * self.params.size / self.data_a[0]
         self.calc_hedge_ratio()
 
-        # Check if there is already an open trade
-        if self.position.size == 0:
-            if self.zscore < self.lower_bound:
-                # Buy the spread
-                self.log("BUY SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0]))
-                self.log("Z-SCORE: {}".format(self.zscore))
-                self.order_target_size(self.datas[0], self.size)
-                self.order_target_size(self.datas[1], -self.hedge_ratio * self.size)
-            elif self.zscore > self.upper_bound:
-                # Sell the spread
-                self.log("SELL SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0]))
-                self.log("Z-SCORE: {}".format(self.zscore))
-                self.order_target_size(self.datas[0], -self.size)
-                self.order_target_size(self.datas[1], self.hedge_ratio * self.size)
+        #if len(self.spread_history) >= self.params.window:
+            # wrong! have to do it with the buy condition buys or sell spread
+                # Check if there is already an open trade
+                if self.getposition().size == 0:
+                    if (self.zscore < self.lower_bound):
+                        # Buy the spread
+                        self.log("BUY SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0]))
+                        self.log("Z-SCORE: {}".format(self.zscore))
+                        self.log("Portfolio Value: {}".format(self.equity))
+                        self.log("Hurst: {}".format(self.hurst_exponent))
+                        self.log("ADF P-Value: {}".format(adfuller(self.spread_history)[1]))
+                        self.order_target_size(self.datas[0], self.trade_size)
+                        self.order_target_size(self.datas[1], -self.hedge_ratio * self.trade_size)
 
-        # If there is an open trade, wait until the zscore crosses zero
-        elif self.position.size > 0 and self.zscore > 0:
-            self.log("CLOSE LONG SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0]))
-            self.log("Z-SCORE: {}".format(self.zscore))
-            self.order_target_size(self.datas[0], 0)
-            self.order_target_size(self.datas[1], 0)
+                    elif (self.zscore > self.upper_bound):
+                        # Sell the spread
+                        self.log("SELL SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0]))
+                        self.log("Z-SCORE: {}".format(self.zscore))
+                        self.log("Portfolio Value: {}".format(self.equity))
+                        self.log("Hurst: {}".format(self.hurst_exponent))
+                        self.log("ADF P-Value: {}".format(adfuller(self.spread_history)[1]))
+                        self.order_target_size(self.datas[0], -self.trade_size)
+                        self.order_target_size(self.datas[1], self.hedge_ratio * self.trade_size)
 
-        elif self.position.size < 0 and self.zscore < 0:
-            self.log("CLOSE SHORT SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0]))
-            self.log("Z-SCORE: {}".format(self.zscore))
-            self.order_target_size(self.datas[0], 0)
-            self.order_target_size(self.datas[1], 0)
+
+                # If there is an open trade, wait until the zscore crosses zero
+                elif self.getposition().size > 0 and self.zscore > 0:
+                    self.log("CLOSE LONG SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0]))
+                    self.log("Z-SCORE: {}".format(self.zscore))
+                    self.log("Portfolio Value: {}".format(self.equity))
+                    self.order_target_size(self.datas[0], 0)
+                    self.order_target_size(self.datas[1], 0)
+
+
+                elif self.getposition().size < 0 and self.zscore < 0:
+                    self.log("CLOSE SHORT SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0]))
+                    self.log("Z-SCORE: {}".format(self.zscore))
+                    self.log("Portfolio Value: {}".format(self.equity))
+                    self.order_target_size(self.datas[0], 0)
+                    self.order_target_size(self.datas[1], 0)
+
 
 
 #%%
-# possible improvement ->  try to stray away from thinking in terms of entry/exit
-# and instead position size as a function of signal strength
-# add win rates
-# 1% Portfolio value rule for position size
 
-# strategie improvment like shorter term cointegration -> look for pair with cointegration on short time frames
-# trade shorter time frame and change pair if there is any signal that cointegration starts slowing
-
-from backtrader.analyzers import tradeanalyzer
+# why are the winning and losing trades always the same amount?
+# ADF with trades most of time pvalue >0.05 -> non stationary. mean spread we trade is not stationary
 
 if __name__ == "__main__":
-
-    days = 300
-    std_dev = 1
-    size = 10000
-
+    days = 180
     cerebro = bt.Cerebro()
 
     # Fetch data and find cointegrated pairs
@@ -121,9 +148,13 @@ if __name__ == "__main__":
     data = fetch_crypto_data(20, days, client)
     pairs = find_cointegrated_pairs_2(data)
 
+    window = int(pairs['Half Life'][0])
+    #window = 1000
+    std_dev = 1
+    size = 0.02
+
     # Choose the pair with the smallest p-value
     tickers_pairs = pairs.iloc[0, 0:2]
-    window = int(pairs.iloc[0,3])
     print(f'trading pair: ' + str(tickers_pairs))
 
     # Fetch data for the chosen pair
@@ -133,7 +164,6 @@ if __name__ == "__main__":
     data1 = bt.feeds.PandasData(dataname=pd.DataFrame(data_df1))
     cerebro.adddata(data0)
     cerebro.adddata(data1)
-
 
     # Add the strategy
     cerebro.addstrategy(PairsTrading, window=window, std_dev=std_dev, size=size)
@@ -158,10 +188,10 @@ if __name__ == "__main__":
     print("Starting cash: ${}".format(cerebro.broker.startingcash))
     print("Ending cash: ${}".format(cerebro.broker.getvalue()))
     print("Total return: {:.2f}%".format(100*((cerebro.broker.getvalue()/cerebro.broker.startingcash)-1)))
+    print("Half-Live: " + str(window) + " hours")
     print("Number of trades: {}".format(trade_analyzer.total.closed))
-    print("Half Life: " + str(window) + " hours")
-    print("Winning Trades:", results[0].analyzers.trade_analyzer.get_analysis()['won'])
-    print("Losing Trades:", results[0].analyzers.trade_analyzer.get_analysis()['lost'])
+    print("Winning Trades:", results[0].analyzers.trade_analyzer.get_analysis()['won']['total'])
+    print("Losing Trades:", results[0].analyzers.trade_analyzer.get_analysis()['lost']['total'])
 
     # Get the strategy instance
     strategy_instance = results[0]
@@ -189,15 +219,16 @@ if __name__ == "__main__":
     # create cerebro chart
     cerebro.plot(iplot=True, volume=False)
 
-    # performance analytics
+    # create quantstats charts & statistics html
     portfolio_stats = strategy_instance.analyzers.getbyname('PyFolio')
     returns, positions, transactions, gross_lev = portfolio_stats.get_pf_items()
     returns.index = returns.index.tz_convert(None)
-    quantstats.reports.html(returns, output='stats.html', title='BTC Sentiment')
 
+    quantstats.reports.html(returns, output='stats.html', title='Backtrade Pairs')
 
 
 #%%
+
 def find_cointegrated_pairs_2(data):
     ''' find from a list cointegrated pairs'''
     n = data.shape[1]
@@ -221,13 +252,6 @@ def find_cointegrated_pairs_2(data):
             # Add cointegrated pair to list (if p-value is less than 0.05)
             if pvalue < 0.05:
 
-                #delta = np.log(S1/S2)
-                #beta = np.polyfit(S1, delta, 1)[0]
-                #half_life = np.log(2) / beta
-
-                #res = sm.OLS(S1, sm.add_constant(S2)).fit()
-                #half_life_2 = -np.log(2) / res.params[1]
-
                 model = sm.OLS(S1, S2)
                 results = model.fit()
                 hedgeRatio = results.params
@@ -241,14 +265,48 @@ def find_cointegrated_pairs_2(data):
                 theta = results2.params
                 half_life = -np.log(2)/theta
 
+                lags = range(2, len(z)//2)
+                tau = [np.sqrt(np.abs(pd.Series(z) - pd.Series(z).shift(lag)).dropna().var()) for lag in lags]
+                poly = np.polyfit(np.log(lags), np.log(tau), 1)
+                hurst_exp = poly[0] * 2
 
-                pairs.append((keys[i], keys[j], pvalue, half_life.values))
+                if hurst_exp < 0.5:
+                    pairs.append((keys[i], keys[j], pvalue, half_life.values, hurst_exp))
+
+
+
 
     # Sort cointegrated pairs by p-value in ascending order
     pairs.sort(key=lambda x: x[2])
 
-    return pd.DataFrame(pairs, columns=['Asset 1', 'Asset 2', 'P-value', 'Half Life'])
+    return pd.DataFrame(pairs, columns=['Asset 1', 'Asset 2', 'P-value', 'Half Life', 'Hurst'])
 
 
+def hurst_2(df_series):
+    """Returns the Hurst exponent of the time series vector ts"""
+    # df_series = df_series if not isinstance(df_series, pd.Series) else df_series.to_list()
+    # Create the range of lag values
+    lags = range(2, 10)
+
+    # Calculate the array of the variances of the lagged differences
+    tau = [np.sqrt((df_series - df_series.shift(-lag)).std()) for lag in lags]
+
+    # Use a linear fit to estimate the Hurst Exponent
+    poly = np.polyfit(np.log(lags), np.log(tau), 1)
+
+    # Return the Hurst exponent from the polyfit output
+    return poly[0] * 2
+
+#%%
+
+window = 10
+
+test2 = hurst_2(pd.Series(strategy_instance.spread_history_full)[-window:])
+
+tau = [np.sqrt(np.abs(pd.Series(self.spread_history) - pd.Series(self.spread_history).shift(lag)).dropna().var()) for lag in lags]
+
+# Use a linear fit to estimate the Hurst Exponent
+poly = np.polyfit(np.log(lags), np.log(tau), 1)
+self.hurst_exponent = poly[0] * 2
 
 #%%
