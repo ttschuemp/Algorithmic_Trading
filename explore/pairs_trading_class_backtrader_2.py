@@ -134,7 +134,7 @@ class PairsTrading(bt.Strategy):
 # if not are decying -> look for new coointegrated pairs
 
 if __name__ == "__main__":
-    days = 180
+    days = 700
     cerebro = bt.Cerebro()
 
     # Fetch data and find cointegrated pairs
@@ -144,8 +144,8 @@ if __name__ == "__main__":
 
     window = int(pairs['Half Life'][0])
     #window = 1000
-    std_dev = 1
-    size = 0.01
+    std_dev = 0.75
+    size = 0.02
 
     # Choose the pair with the smallest p-value
     tickers_pairs = pairs.iloc[0, 0:2]
@@ -164,7 +164,7 @@ if __name__ == "__main__":
 
     # Set the commission and the starting cash
     cerebro.broker.setcommission(commission=0.001)
-    cerebro.broker.setcash(100000)
+    cerebro.broker.setcash(1000)
 
     # Add analyzers
     cerebro.addanalyzer(bt.analyzers.TradeAnalyzer, _name='trade_analyzer')

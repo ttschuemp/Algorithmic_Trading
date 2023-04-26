@@ -35,35 +35,46 @@ def fetch_crypto_data(top_n, days, client):
 
     ticker_pairs = [f"{ticker.upper()}" for ticker in ticker_pairs]
 
+    stable_coins = ['USDTUSDT', 'USDCUSDT', 'BUSDUSDT', 'DAIUSDT']
+
     # Define the start and end time for the historical data
     end_time = datetime.datetime.now()
     start_time = end_time - datetime.timedelta(days=days)
 
     # Loop over the trading pairs and retrieve the historical intra-day 1-hour ticks
     df_list = []
-    for symbol in ticker_pairs:
-        try:
-            klines = client.get_historical_klines(symbol, Client.KLINE_INTERVAL_1HOUR, start_time.strftime("%d %b %Y %H:%M:%S"), end_time.strftime("%d %b %Y %H:%M:%S"))
-            if len(klines) >= (days-1)*24:
-                df = pd.DataFrame(klines, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ignore'])
-                df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
-                df.set_index('timestamp', inplace=True)
-                df.drop(['open', 'high', 'low', 'volume', 'close_time', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ignore'], axis=1, inplace=True)
-                df.columns = [symbol]
-                df_list.append(df)
-                print(f"Retrieved {len(klines)} klines for {symbol}")
-            else:
-                print(f"Skipping {symbol} due to insufficient data points (has {len(klines)} klines)")
-        except Exception as e:
-            print(f"Error retrieving data for {symbol}: {e}")
+    if ticker_pairs not in stable_coins:
+        for symbol in ticker_pairs:
+            try:
+                klines = client.get_historical_klines(symbol, Client.KLINE_INTERVAL_1HOUR, start_time.strftime("%d %b %Y %H:%M:%S"), end_time.strftime("%d %b %Y %H:%M:%S"))
+                if len(klines) >= (days-1)*24:
+                    df = pd.DataFrame(klines, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ignore'])
+                    df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+                    df.set_index('timestamp', inplace=True)
+                    df.drop(['open', 'high', 'low', 'volume', 'close_time', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ignore'], axis=1, inplace=True)
+                    df.columns = [symbol]
+                    df_list.append(df)
+                    print(f"Retrieved {len(klines)} klines for {symbol}")
+                else:
+                    print(f"Skipping {symbol} due to insufficient data points (has {len(klines)} klines)")
+            except Exception as e:
+                print(f"Error retrieving data for {symbol}: {e}")
 
-        # Throttle the API requests to avoid hitting the rate limit
-        time.sleep(1)
+            # Throttle the API requests to avoid hitting the rate limit
+            time.sleep(1)
 
-    # Combine the dataframes into one
+        # Combine the dataframes into one
 
-    return pd.concat(df_list, axis=1)
+        return pd.concat(df_list, axis=1)
 
 
 
+#%%
+top_n = 100
+response = requests.get(f"https://api.coingecko.com/api/v3/coins/"
+                            f"markets?vs_currency=usd&order=market_cap_desc&per_page={top_n}&"
+                            f"page=1&sparkline=false&price_change_percentage=24h", verify=False)
+top_cryptos = response.json()
+ticker_pairs = [crypto["symbol"].lower() + "usdt" for crypto in top_cryptos]
+ticker_pairs = [f"{ticker.upper()}" for ticker in ticker_pairs]
 #%%

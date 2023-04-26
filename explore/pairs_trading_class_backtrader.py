@@ -91,8 +91,6 @@ class PairsTrading(bt.Strategy):
         self.trade_size = self.equity * self.params.size / self.data_a[0]
         self.calc_hedge_ratio()
 
-        #if len(self.spread_history) >= self.params.window:
-            # wrong! have to do it with the buy condition buys or sell spread
                 # Check if there is already an open trade
                 if self.getposition().size == 0:
                     if (self.zscore < self.lower_bound):
@@ -137,7 +135,7 @@ class PairsTrading(bt.Strategy):
 #%%
 
 # why are the winning and losing trades always the same amount?
-# ADF with trades most of time pvalue >0.05 -> non stationary. mean spread we trade is not stationary
+# ADF with trades most of time pvalue >0.05 -> non stationary. means spread we trade is not stationary
 
 if __name__ == "__main__":
     days = 90
