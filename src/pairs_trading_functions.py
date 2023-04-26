@@ -13,7 +13,6 @@ from statsmodels.tsa.vector_ar.vecm import coint_johansen
 from scipy import stats
 #from xbbg import blp
 
-# test push
 
 # function for pairs trading with walk forward hedge ratio
 
@@ -115,3 +114,4 @@ def dynamic_trading_strategy_pairs_backtest(data, window, std_dev):
     plt.plot(np.cumsum(pnl))
     print(sharpe_ratio)
 
+#%%
