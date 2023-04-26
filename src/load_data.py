@@ -43,8 +43,9 @@ def fetch_crypto_data(top_n, days, client):
 
     # Loop over the trading pairs and retrieve the historical intra-day 1-hour ticks
     df_list = []
-    if ticker_pairs not in stable_coins:
-        for symbol in ticker_pairs:
+    for symbol in ticker_pairs:
+
+        if symbol not in stable_coins:
             try:
                 klines = client.get_historical_klines(symbol, Client.KLINE_INTERVAL_1HOUR, start_time.strftime("%d %b %Y %H:%M:%S"), end_time.strftime("%d %b %Y %H:%M:%S"))
                 if len(klines) >= (days-1)*24:
@@ -63,9 +64,9 @@ def fetch_crypto_data(top_n, days, client):
             # Throttle the API requests to avoid hitting the rate limit
             time.sleep(1)
 
-        # Combine the dataframes into one
+    # Combine the dataframes into one
 
-        return pd.concat(df_list, axis=1)
+    return pd.concat(df_list, axis=1)
 
 
 
