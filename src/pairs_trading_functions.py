@@ -45,6 +45,50 @@ def find_cointegrated_pairs(data):
 
     return pd.DataFrame(pairs)
 
+def find_cointegrated_pairs_3(data):
+    ''' find from a list cointegrated pairs'''
+    n = data.shape[1]
+    keys = data.keys()
+    pvalue_matrix = np.ones((n, n))
+    pairs = []
+
+    # Loop through each combination of assets
+    for i in range(n):
+        for j in range(i+1, n):
+            S1 = pd.to_numeric(data[keys[i]])
+            S2 = pd.to_numeric(data[keys[j]])
+
+            # Test for cointegration
+            result = ts.coint(S1, S2)
+            pvalue = result[1]
+
+            # Store p-value in matrix
+            pvalue_matrix[i, j] = pvalue
+
+            # Add cointegrated pair to list (if p-value is less than 0.05)
+            if pvalue < 0.05:
+
+                model = sm.OLS(S1, S2)
+                results = model.fit()
+                hedgeRatio = results.params
+                z = S1 - hedgeRatio[0] * S2
+                prevz = z.shift()
+                dz = z-prevz
+                dz = dz[1:,]
+                prevz = prevz[1:,]
+                model2 = sm.OLS(dz, prevz-np.mean(prevz))
+                results2 = model2.fit()
+                theta = results2.params
+                half_life = -np.log(2)/theta
+
+
+                pairs.append((keys[i], keys[j], pvalue, half_life.values))
+
+    # Sort cointegrated pairs by p-value in ascending order
+    pairs.sort(key=lambda x: x[2])
+
+    return pd.DataFrame(pairs, columns=['Asset 1', 'Asset 2', 'P-value', 'Half Life'])
+
 
 def calc_dynamic_hedge_ratio_ols(data, window):
     """
