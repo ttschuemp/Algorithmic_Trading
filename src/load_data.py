@@ -72,10 +72,17 @@ def fetch_crypto_data(top_n, days, client):
 
 #%%
 top_n = 100
+stable_coins = ['USDTUSDT', 'USDCUSDT', 'BUSDUSDT', 'DAIUSDT']
 response = requests.get(f"https://api.coingecko.com/api/v3/coins/"
                             f"markets?vs_currency=usd&order=market_cap_desc&per_page={top_n}&"
                             f"page=1&sparkline=false&price_change_percentage=24h", verify=False)
 top_cryptos = response.json()
 ticker_pairs = [crypto["symbol"].lower() + "usdt" for crypto in top_cryptos]
 ticker_pairs = [f"{ticker.upper()}" for ticker in ticker_pairs]
+
+for symbol in ticker_pairs:
+    if symbol not in stable_coins:
+        print(symbol)
+
+
 #%%
