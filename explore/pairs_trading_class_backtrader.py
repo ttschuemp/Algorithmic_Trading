@@ -146,7 +146,7 @@ if __name__ == "__main__":
     # Fetch data and find cointegrated pairs
     client = Client(api_key, api_secret)
     data = fetch_crypto_data(20, days, client)
-    pairs = find_cointegrated_pairs_2(data)
+    pairs = find_cointegrated_pairs_hurst(data)
 
     window = int(pairs['Half Life'][0])
     #window = 1000
@@ -225,61 +225,6 @@ if __name__ == "__main__":
     returns.index = returns.index.tz_convert(None)
 
     quantstats.reports.html(returns, output='stats.html', title='Backtrade Pairs')
-
-
-#%%
-
-def find_cointegrated_pairs_2(data):
-    ''' find from a list cointegrated pairs'''
-    n = data.shape[1]
-    keys = data.keys()
-    pvalue_matrix = np.ones((n, n))
-    pairs = []
-
-    # Loop through each combination of assets
-    for i in range(n):
-        for j in range(i+1, n):
-            S1 = pd.to_numeric(data[keys[i]])
-            S2 = pd.to_numeric(data[keys[j]])
-
-            # Test for cointegration
-            result = ts.coint(S1, S2)
-            pvalue = result[1]
-
-            # Store p-value in matrix
-            pvalue_matrix[i, j] = pvalue
-
-            # Add cointegrated pair to list (if p-value is less than 0.05)
-            if pvalue < 0.05:
-
-                model = sm.OLS(S1, S2)
-                results = model.fit()
-                hedgeRatio = results.params
-                z = S1 - hedgeRatio[0] * S2
-                prevz = z.shift()
-                dz = z-prevz
-                dz = dz[1:,]
-                prevz = prevz[1:,]
-                model2 = sm.OLS(dz, prevz-np.mean(prevz))
-                results2 = model2.fit()
-                theta = results2.params
-                half_life = -np.log(2)/theta
-
-                lags = range(2, len(z)//2)
-                tau = [np.sqrt(np.abs(pd.Series(z) - pd.Series(z).shift(lag)).dropna().var()) for lag in lags]
-                poly = np.polyfit(np.log(lags), np.log(tau), 1)
-                hurst_exp = poly[0] * 2
-
-                if hurst_exp < 0.5:
-                    pairs.append((keys[i], keys[j], pvalue, half_life.values, hurst_exp))
-
-
-
-
-    # Sort cointegrated pairs by p-value in ascending order
-    pairs.sort(key=lambda x: x[2])
-
-    return pd.DataFrame(pairs, columns=['Asset 1', 'Asset 2', 'P-value', 'Half Life', 'Hurst'])
 
 
 #%%

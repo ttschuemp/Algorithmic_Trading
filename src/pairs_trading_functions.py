@@ -45,7 +45,7 @@ def find_cointegrated_pairs(data):
 
     return pd.DataFrame(pairs)
 
-def find_cointegrated_pairs_3(data):
+def find_cointegrated_pairs_hurst(data):
     ''' find from a list cointegrated pairs'''
     n = data.shape[1]
     keys = data.keys()
@@ -81,14 +81,19 @@ def find_cointegrated_pairs_3(data):
                 theta = results2.params
                 half_life = -np.log(2)/theta
 
+                lags = range(2, len(z)//2)
+                tau = [np.sqrt(np.abs(pd.Series(z) - pd.Series(z).shift(lag)).dropna().var()) for lag in lags]
+                poly = np.polyfit(np.log(lags), np.log(tau), 1)
+                hurst_exp = poly[0] * 2
 
-                pairs.append((keys[i], keys[j], pvalue, half_life.values))
+                if hurst_exp < 0.5:
+                    pairs.append((keys[i], keys[j], pvalue, half_life.values, hurst_exp))
+
 
     # Sort cointegrated pairs by p-value in ascending order
     pairs.sort(key=lambda x: x[2])
 
-    return pd.DataFrame(pairs, columns=['Asset 1', 'Asset 2', 'P-value', 'Half Life'])
-
+    return pd.DataFrame(pairs, columns=['Asset 1', 'Asset 2', 'P-value', 'Half Life', 'Hurst'])
 
 def calc_dynamic_hedge_ratio_ols(data, window):
     """
