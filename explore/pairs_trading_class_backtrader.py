@@ -301,5 +301,3 @@ test2 = hurst_2(pd.Series(strategy_instance.spread_history_full)[-window:])
 
 
 #%%
-
-#%%
