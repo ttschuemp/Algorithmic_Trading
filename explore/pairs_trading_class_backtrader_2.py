@@ -134,12 +134,12 @@ class PairsTrading(bt.Strategy):
 # if not are decying -> look for new coointegrated pairs
 
 if __name__ == "__main__":
-    days = 700
+    days = 30
     cerebro = bt.Cerebro()
 
     # Fetch data and find cointegrated pairs
     client = Client(api_key, api_secret)
-    data = fetch_crypto_data(10, days, client)
+    data = fetch_crypto_data(30, days, client)
     pairs = find_cointegrated_pairs_hurst(data)
 
     window = int(pairs['Half Life'][0])

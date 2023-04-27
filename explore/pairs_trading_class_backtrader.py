@@ -17,8 +17,6 @@ from src.pairs_trading_functions import*
 from binance import Client
 from src.api_key_secret import api_key, api_secret, path_zert
 
-#%%
-
 
 class PairsTrading(bt.Strategy):
     params = (
