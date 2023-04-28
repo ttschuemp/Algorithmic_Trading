@@ -68,6 +68,7 @@ def find_cointegrated_pairs_hurst(data):
             # Add cointegrated pair to list (if p-value is less than 0.05)
             if pvalue < 0.05:
 
+                # calc half life
                 model = sm.OLS(S1, S2)
                 results = model.fit()
                 hedgeRatio = results.params
@@ -86,6 +87,7 @@ def find_cointegrated_pairs_hurst(data):
                 poly = np.polyfit(np.log(lags), np.log(tau), 1)
                 hurst_exp = poly[0] * 2
 
+                # calc hurst exponent
                 if hurst_exp < 0.5:
                     pairs.append((keys[i], keys[j], pvalue, half_life.values, hurst_exp))
 

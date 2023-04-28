@@ -12,6 +12,7 @@ import collections
 import matplotlib.pyplot as plt
 import pandas as pd
 from statsmodels.tsa.stattools import adfuller
+import backtrader.broker as btbroker
 from src.load_data import fetch_crypto_data, fetch_data
 from src.pairs_trading_functions import*
 from binance import Client
@@ -167,6 +168,8 @@ if __name__ == "__main__":
     # Set the commission and the starting cash
     cerebro.broker.setcommission(commission=0.001)
     cerebro.broker.setcash(100000)
+    #slippage = 0.001
+    #cerebro.broker = btbroker.BackBroker(slip_perc=slippage)
 
     # Add analyzers
     cerebro.addanalyzer(bt.analyzers.TradeAnalyzer, _name='trade_analyzer')
@@ -188,6 +191,9 @@ if __name__ == "__main__":
     print("Number of trades: {}".format(trade_analyzer.total.closed))
     print("Winning Trades:", results[0].analyzers.trade_analyzer.get_analysis()['won']['total'])
     print("Losing Trades:", results[0].analyzers.trade_analyzer.get_analysis()['lost']['total'])
+    print("Win Ratio:", results[0].analyzers.trade_analyzer.get_analysis()['won']['total'] /
+          trade_analyzer.total.closed)
+
 
     # Get the strategy instance
     strategy_instance = results[0]
@@ -210,6 +216,7 @@ if __name__ == "__main__":
     plt.legend(["Hedge ratio"])
 
     plt.tight_layout()
+    plt.savefig('strategy')
     plt.show()
 
     # create cerebro chart
