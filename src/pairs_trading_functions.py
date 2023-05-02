@@ -11,7 +11,7 @@ from statsmodels.tsa.stattools import adfuller
 from statsmodels.graphics.tsaplots import plot_acf
 from statsmodels.tsa.vector_ar.vecm import coint_johansen
 from scipy import stats
-#from xbbg import blp
+from hurst import compute_Hc, random_walk
 
 
 # function for pairs trading with walk forward hedge ratio
@@ -87,15 +87,18 @@ def find_cointegrated_pairs_hurst(data):
                 poly = np.polyfit(np.log(lags), np.log(tau), 1)
                 hurst_exp = poly[0] * 2
 
+                hurst_2, c, data = compute_Hc(z, kind='change', simplified=True)
+
+
                 # calc hurst exponent
                 if hurst_exp < 0.5:
-                    pairs.append((keys[i], keys[j], pvalue, half_life.values, hurst_exp))
+                    pairs.append((keys[i], keys[j], pvalue, half_life.values, hurst_exp, hurst_2))
 
 
     # Sort cointegrated pairs by p-value in ascending order
     pairs.sort(key=lambda x: x[2])
 
-    return pd.DataFrame(pairs, columns=['Asset 1', 'Asset 2', 'P-value', 'Half Life', 'Hurst'])
+    return pd.DataFrame(pairs, columns=['Asset 1', 'Asset 2', 'P-value', 'Half Life', 'Hurst', 'Hurst 2'])
 
 def calc_dynamic_hedge_ratio_ols(data, window):
     """
@@ -164,5 +167,6 @@ def dynamic_trading_strategy_pairs_backtest(data, window, std_dev):
     # plot equity curve
     plt.plot(np.cumsum(pnl))
     print(sharpe_ratio)
+
 
 #%%
