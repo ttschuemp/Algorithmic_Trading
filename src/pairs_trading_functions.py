@@ -87,7 +87,7 @@ def find_cointegrated_pairs_hurst(data):
                 poly = np.polyfit(np.log(lags), np.log(tau), 1)
                 hurst_exp = poly[0] * 2
 
-                hurst_2, c, data = compute_Hc(z, kind='change', simplified=True)
+                hurst_2, c, data_2 = compute_Hc(z, kind='change', simplified=True)
 
 
                 # calc hurst exponent
