@@ -91,7 +91,7 @@ def find_cointegrated_pairs_hurst(data):
 
 
                 # calc hurst exponent
-                if hurst_exp < 0.5:
+                if hurst_2 < 0.5:
                     pairs.append((keys[i], keys[j], pvalue, half_life.values, hurst_exp, hurst_2))
 
 
