@@ -45,6 +45,8 @@ class PairsTrading(bt.Strategy):
 
         self.ols_slope = btind.OLS_Slope_InterceptN(self.data_a, self.data_b, period=self.params.window)
         self.hurst_exponent = None
+        self.hurst_exponent_2 = None
+
     def log(self, txt, dt=None):
         dt = dt or self.datas[0].datetime.date(0)
         print("{} {}".format(dt.isoformat(), txt))
@@ -71,7 +73,7 @@ class PairsTrading(bt.Strategy):
                 lags = range(2, self.params.window // 2)
 
                 # Calculate the array of the variances of the lagged differences
-                tau = [np.sqrt(np.abs(pd.Series(self.spread_history) - pd.Series(self.spread_history).shift(lag)).dropna().var()) for lag in lags]
+                tau = [np.sqrt(np.abs((self.spread_history) - pd.Series(self.spread_history).shift(lag)).dropna().var()) for lag in lags]
 
                 # Use a linear fit to estimate the Hurst Exponent
                 poly = np.polyfit(np.log(lags), np.log(tau), 1)
@@ -98,6 +100,7 @@ class PairsTrading(bt.Strategy):
                         self.log("Z-SCORE: {}".format(self.zscore))
                         self.log("Portfolio Value: {}".format(self.equity))
                         self.log("Hurst: {}".format(self.hurst_exponent))
+                        self.log("Hurst 2: {}".format(self.hurst_exponent_2))
                         self.log("ADF P-Value: {}".format(adfuller(self.spread_history)[1]))
                         self.order_target_size(self.datas[0], self.trade_size)
                         self.order_target_size(self.datas[1], -self.hedge_ratio * self.trade_size)
@@ -108,6 +111,7 @@ class PairsTrading(bt.Strategy):
                         self.log("Z-SCORE: {}".format(self.zscore))
                         self.log("Portfolio Value: {}".format(self.equity))
                         self.log("Hurst: {}".format(self.hurst_exponent))
+                        self.log("Hurst 2: {}".format(self.hurst_exponent_2))
                         self.log("ADF P-Value: {}".format(adfuller(self.spread_history)[1]))
                         self.order_target_size(self.datas[0], -self.trade_size)
                         self.order_target_size(self.datas[1], self.hedge_ratio * self.trade_size)
@@ -146,7 +150,7 @@ if __name__ == "__main__":
     pairs = find_cointegrated_pairs_hurst(data)
 
     window = int(pairs['Half Life'][0])
-    #window = 1000
+    window = 150
     std_dev = 1
     size = 0.02
 
@@ -228,6 +232,7 @@ if __name__ == "__main__":
     returns.index = returns.index.tz_convert(None)
 
     quantstats.reports.html(returns, output='stats.html', title='Backtrade Pairs')
+
 
 
 #%%

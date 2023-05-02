@@ -55,14 +55,14 @@ class PairsTrading(bt.Strategy):
 
     def calc_hedge_ratio(self):
 
-            if len(self.data_a) < self.window:
-                return
-            else:
-                a = self.data_a[-self.window:]
-                b = self.data_b[-self.window:]
+                print('start')
+                a = self.data_a.get(size=self.window)
+                b = self.data_b.get(size=self.window)
 
                 result = coint_johansen(np.array([a,b].T), det_order=0, k_ar_diff=1)
-                print(result.eigvec[0][1])
+                self.hedge_ratio = result.eigvec[0][1]
+                self.log("Hedge ratio:".format(self.hedge_ratio))
+                self.log("Hedge ratio:")
 """
             result = coint_johansen(np.array([rolling_x.mean(), rolling_y.mean()]).T, det_order=0, k_ar_diff=1)
             johansen_hedge_ratio = result.evec[0, 1] / result.evec[0, 0]
@@ -103,6 +103,9 @@ class PairsTrading(bt.Strategy):
         self.equity = self.broker.get_value()
         self.trade_size = self.equity * self.params.size / self.data_a[0]
         self.calc_hedge_ratio()
+        self.log("Hedge ratio:".format(self.hedge_ratio))
+        self.log("Hedge ratio:".format("hello"))
+
 
 
 
@@ -119,7 +122,7 @@ if __name__ == "__main__":
 
     # Fetch data and find cointegrated pairs
     client = Client(api_key, api_secret)
-    data = fetch_crypto_data(20, days, client)
+    data = fetch_crypto_data(15, days, client)
     pairs = find_cointegrated_pairs_hurst(data)
 
     window = int(pairs['Half Life'][0])

@@ -100,6 +100,7 @@ def find_cointegrated_pairs_hurst(data):
 
     return pd.DataFrame(pairs, columns=['Asset 1', 'Asset 2', 'P-value', 'Half Life', 'Hurst', 'Hurst 2'])
 
+
 def calc_dynamic_hedge_ratio_ols(data, window):
     """
     Calculates rolling hedge ratio using OLS
