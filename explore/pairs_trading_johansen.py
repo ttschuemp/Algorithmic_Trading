@@ -48,6 +48,9 @@ class PairsTrading(bt.Strategy):
         #self.ols_slope = btind.OLS_Slope_InterceptN(self.data_a, self.data_b, period=self.params.window)
         self.hedge_ratio = None
         self.hurst_exponent = None
+
+        self.data = None
+
     def log(self, txt, dt=None):
         dt = dt or self.datas[0].datetime.date(0)
         print("{} {}".format(dt.isoformat(), txt))
@@ -55,56 +58,39 @@ class PairsTrading(bt.Strategy):
 
     def calc_hedge_ratio(self):
 
-                print('start')
-                a = self.data_a.get(size=self.window)
-                b = self.data_b.get(size=self.window)
 
-                result = coint_johansen(np.array([a,b].T), det_order=0, k_ar_diff=1)
-                self.hedge_ratio = result.eigvec[0][1]
-                self.log("Hedge ratio:".format(self.hedge_ratio))
-                self.log("Hedge ratio:")
-"""
-            result = coint_johansen(np.array([rolling_x.mean(), rolling_y.mean()]).T, det_order=0, k_ar_diff=1)
-            johansen_hedge_ratio = result.evec[0, 1] / result.evec[0, 0]
-            print(johansen_hedge_ratio)
-            self.hedge_ratio = johansen_hedge_ratio
-            print(self.hedge_ratio)
-            #hedge_ratio = self.ols_slope.slope[0]
-            spread = self.data_a[0] - (self.hedge_ratio * self.data_b[0])
-            self.spread_history.append(spread)
-            spread_mean = pd.Series(self.spread_history).rolling(self.params.window).mean().iloc[-1]
-            spread_std_dev = pd.Series(self.spread_history).rolling(self.params.window).std().iloc[-1]
-            self.zscore = (spread - spread_mean) / spread_std_dev
+            
+                a = self.data_a.get()
+                b = self.data_b.get()
+            
+                # Create a rolling window of size self.window using np.roll
+                a_window = np.roll(a, -self.window)
+                b_window = np.roll(b, -self.window)
+                a_window[-self.window:] = a[-self.window:]
+                b_window[-self.window:] = b[-self.window:]
 
-            self.spread_history_full.append(spread)
-            self.zscore_history.append(self.zscore)
-            self.hedge_ratio_history.append(hedge_ratio)
 
-            # calc hurst exponent
-            if len(self.spread_history) >= self.params.window:
 
-                #if adfuller(self.spread_history)[1] <= 0.1:
-                lags = range(2, self.params.window // 2)
 
-                # Calculate the array of the variances of the lagged differences
-                tau = [np.sqrt(np.abs(pd.Series(self.spread_history) - pd.Series(self.spread_history).shift(lag)).dropna().var()) for lag in lags]
+                result = coint_johansen(np.column_stack((a_window, b_window)), det_order=0, k_ar_diff=1)
+                #result = coint_johansen(self.data, det_order=0, k_ar_diff=1)
+                self.hedge_ratio = result.evec.T[0] / result.evec.T[0][0]
 
-                # Use a linear fit to estimate the Hurst Exponent
-                poly = np.polyfit(np.log(lags), np.log(tau), 1)
-                self.hurst_exponent = poly[0] * 2
-"""
+                #self.hedge_ratio = result.evec[1,0] / result.evec[0,0]
+                #self.log("Hedge ratio:".format(self.hedge_ratio))
+
 
     def start(self):
         self.equity = self.broker.get_cash()
 
 
     def next(self):
-
         self.equity = self.broker.get_value()
         self.trade_size = self.equity * self.params.size / self.data_a[0]
+
         self.calc_hedge_ratio()
         self.log("Hedge ratio:".format(self.hedge_ratio))
-        self.log("Hedge ratio:".format("hello"))
+
 
 
 
@@ -158,6 +144,61 @@ if __name__ == "__main__":
     # Run the backtest
     results = cerebro.run()
 
+    strategy_instance = results[0]
 
 
+
+
+#%%
+
+"""
+            result = coint_johansen(np.array([rolling_x.mean(), rolling_y.mean()]).T, det_order=0, k_ar_diff=1)
+            johansen_hedge_ratio = result.evec[0, 1] / result.evec[0, 0]
+            print(johansen_hedge_ratio)
+            self.hedge_ratio = johansen_hedge_ratio
+            print(self.hedge_ratio)
+            #hedge_ratio = self.ols_slope.slope[0]
+            spread = self.data_a[0] - (self.hedge_ratio * self.data_b[0])
+            self.spread_history.append(spread)
+            spread_mean = pd.Series(self.spread_history).rolling(self.params.window).mean().iloc[-1]
+            spread_std_dev = pd.Series(self.spread_history).rolling(self.params.window).std().iloc[-1]
+            self.zscore = (spread - spread_mean) / spread_std_dev
+
+            self.spread_history_full.append(spread)
+            self.zscore_history.append(self.zscore)
+            self.hedge_ratio_history.append(hedge_ratio)
+
+            # calc hurst exponent
+            if len(self.spread_history) >= self.params.window:
+
+                #if adfuller(self.spread_history)[1] <= 0.1:
+                lags = range(2, self.params.window // 2)
+
+                # Calculate the array of the variances of the lagged differences
+                tau = [np.sqrt(np.abs(pd.Series(self.spread_history) - pd.Series(self.spread_history).shift(lag)).dropna().var()) for lag in lags]
+
+                # Use a linear fit to estimate the Hurst Exponent
+                poly = np.polyfit(np.log(lags), np.log(tau), 1)
+                self.hurst_exponent = poly[0] * 2
+"""
+#%%
+
+data_df = pd.DataFrame([pd.to_numeric(data.BTCUSDT), pd.to_numeric(data.ADAUSDT)]).T
+
+data_df = np.array([pd.to_numeric(data.BTCUSDT), pd.to_numeric(data.ADAUSDT)]).T
+
+result = coint_johansen(data_df, det_order=0, k_ar_diff=1)
+print(result.lr1)                           # dim = (n,) Trace statistic
+print(result.cvt)                           # dim = (n,3) critical value table (90%, 95%, 99%)
+print(result.evec)
+
+ev = result.evec.T[0] / result.evec.T[0][0]
+
+hedge_ratio = ev[0] * data_df.BTCUSDT + ev[1] * data_df.ADAUSDT
+
+
+x = data_df.ADAUSDT
+x = sm.add_constant(x)
+model = sm.OLS(data_df.BTCUSDT, x).fit()
+hedge_ratio_2 = model.params[1]
 #%%
