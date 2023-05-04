@@ -31,68 +31,25 @@ class PairsTrading(bt.Strategy):
     def __init__(self):
         self.data_a = self.datas[0].close
         self.data_b = self.datas[1].close
-        self.hedge_ratio = None
         self.window = self.params.window
-        self.zscore = None
-        self.spread_history = collections.deque(maxlen=self.params.window)
-        self.upper_bound = self.params.std_dev
-        self.lower_bound = -self.params.std_dev
-        self.size = self.params.size
-        self.trade_size = 0
-        self.equity = None
 
-        self.spread_history_full = []
-        self.zscore_history = []
-        self.hedge_ratio_history = []
-
-        #self.ols_slope = btind.OLS_Slope_InterceptN(self.data_a, self.data_b, period=self.params.window)
-        self.hedge_ratio = None
-        self.hurst_exponent = None
     def log(self, txt, dt=None):
         dt = dt or self.datas[0].datetime.date(0)
         print("{} {}".format(dt.isoformat(), txt))
 
 
-    def calc_hedge_ratio(self):
+    def calc_hedge_ratio(self, data_a, data_b):
 
-                print('start')
-                a = self.data_a.get(size=self.window)
-                b = self.data_b.get(size=self.window)
+        #spread = self.data_a[0] - (2 * self.data_b[0])
 
-                result = coint_johansen(np.array([a,b].T), det_order=0, k_ar_diff=1)
-                self.hedge_ratio = result.eigvec[0][1]
-                self.log("Hedge ratio:".format(self.hedge_ratio))
-                self.log("Hedge ratio:")
-"""
-            result = coint_johansen(np.array([rolling_x.mean(), rolling_y.mean()]).T, det_order=0, k_ar_diff=1)
-            johansen_hedge_ratio = result.evec[0, 1] / result.evec[0, 0]
-            print(johansen_hedge_ratio)
-            self.hedge_ratio = johansen_hedge_ratio
-            print(self.hedge_ratio)
-            #hedge_ratio = self.ols_slope.slope[0]
-            spread = self.data_a[0] - (self.hedge_ratio * self.data_b[0])
-            self.spread_history.append(spread)
-            spread_mean = pd.Series(self.spread_history).rolling(self.params.window).mean().iloc[-1]
-            spread_std_dev = pd.Series(self.spread_history).rolling(self.params.window).std().iloc[-1]
-            self.zscore = (spread - spread_mean) / spread_std_dev
 
-            self.spread_history_full.append(spread)
-            self.zscore_history.append(self.zscore)
-            self.hedge_ratio_history.append(hedge_ratio)
+        #result = coint_johansen(pd.DataFrame([pd.to_numeric(a), pd.to_numeric(b)]).T, det_order=0, k_ar_diff=1)
+        result = coint_johansen(np.array([self.data_a, self.data_b]).T, det_order=0, k_ar_diff=1)
+        hedge_ratio = result.evec.T[0] / result.evec.T[0][0]
+        #return hedge_ratio
+        print(hedge_ratio)
 
-            # calc hurst exponent
-            if len(self.spread_history) >= self.params.window:
 
-                #if adfuller(self.spread_history)[1] <= 0.1:
-                lags = range(2, self.params.window // 2)
-
-                # Calculate the array of the variances of the lagged differences
-                tau = [np.sqrt(np.abs(pd.Series(self.spread_history) - pd.Series(self.spread_history).shift(lag)).dropna().var()) for lag in lags]
-
-                # Use a linear fit to estimate the Hurst Exponent
-                poly = np.polyfit(np.log(lags), np.log(tau), 1)
-                self.hurst_exponent = poly[0] * 2
-"""
 
     def start(self):
         self.equity = self.broker.get_cash()
@@ -100,11 +57,13 @@ class PairsTrading(bt.Strategy):
 
     def next(self):
 
-        self.equity = self.broker.get_value()
-        self.trade_size = self.equity * self.params.size / self.data_a[0]
-        self.calc_hedge_ratio()
-        self.log("Hedge ratio:".format(self.hedge_ratio))
-        self.log("Hedge ratio:".format("hello"))
+        #if len(self.data_a) >= self.window and len(self.data_b) >= self.window:
+
+            self.equity = self.broker.get_value()
+            #self.trade_size = self.equity * self.params.size / self.data_a[0]
+            self.calc_hedge_ratio(self.data_a, self.data_b)
+            #self.log("Hedge ratio:".format(hedge_ratio))
+
 
 
 
