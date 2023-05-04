@@ -148,7 +148,7 @@ class PairsTrading(bt.Strategy):
 # ADF with trades most of time pvalue >0.05 -> non stationary. means spread we trade is not stationary
 
 if __name__ == "__main__":
-    days = 365
+    days = 90
     cerebro = bt.Cerebro()
 
     # Fetch data and find cointegrated pairs

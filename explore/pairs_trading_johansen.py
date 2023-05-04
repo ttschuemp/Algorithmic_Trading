@@ -32,6 +32,9 @@ class PairsTrading(bt.Strategy):
         self.data_a = self.datas[0].close
         self.data_b = self.datas[1].close
         self.window = self.params.window
+        self.hedge_ratio = None
+        self.hedge_ratio_history = []
+
 
     def log(self, txt, dt=None):
         dt = dt or self.datas[0].datetime.date(0)
@@ -40,14 +43,20 @@ class PairsTrading(bt.Strategy):
 
     def calc_hedge_ratio(self, data_a, data_b):
 
-        #spread = self.data_a[0] - (2 * self.data_b[0])
+        try:
+
+            result = coint_johansen(np.array([self.data_a, self.data_b]).T, det_order=0, k_ar_diff=1)
+            hedge_ratio = result.evec.T[0][1] / result.evec.T[0][0]
+
+        except Exception as e:
+
+            print(f"Error calculating hedge ratio: {e}")
+            return None
 
 
-        #result = coint_johansen(pd.DataFrame([pd.to_numeric(a), pd.to_numeric(b)]).T, det_order=0, k_ar_diff=1)
-        result = coint_johansen(np.array([self.data_a, self.data_b]).T, det_order=0, k_ar_diff=1)
-        hedge_ratio = result.evec.T[0] / result.evec.T[0][0]
-        #return hedge_ratio
         print(hedge_ratio)
+        return hedge_ratio
+
 
 
 
@@ -61,7 +70,10 @@ class PairsTrading(bt.Strategy):
 
             self.equity = self.broker.get_value()
             #self.trade_size = self.equity * self.params.size / self.data_a[0]
-            self.calc_hedge_ratio(self.data_a, self.data_b)
+
+
+            self.hedge_ratio = self.calc_hedge_ratio(self.data_a, self.data_b)
+            self.hedge_ratio_history.append(self.hedge_ratio)
             #self.log("Hedge ratio:".format(hedge_ratio))
 
 
@@ -81,11 +93,11 @@ if __name__ == "__main__":
 
     # Fetch data and find cointegrated pairs
     client = Client(api_key, api_secret)
-    data = fetch_crypto_data(15, days, client)
+    data = fetch_crypto_data(30, days, client)
     pairs = find_cointegrated_pairs_hurst(data)
 
-    window = int(pairs['Half Life'][0])
-    #window = 1000
+    #window = int(pairs['Half Life'][0])
+    window = 1000
     std_dev = 1
     size = 0.02
 
@@ -116,6 +128,12 @@ if __name__ == "__main__":
 
     # Run the backtest
     results = cerebro.run()
+
+    strategy_instance = results[0]
+
+    plt.plot(strategy_instance.hedge_ratio_history)
+    plt.title(f'Spread {list(tickers_pairs)}')
+
 
 
 
