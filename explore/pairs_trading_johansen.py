@@ -235,3 +235,24 @@ if __name__ == "__main__":
 
 
 #%%
+
+import pandas as pd
+import numpy as np
+from statsmodels.tsa.vector_ar.vecm import coint_johansen
+
+# Generate some random data
+np.random.seed(123)
+Y1 = np.random.normal(size=100)
+Y2 = np.random.normal(size=100)
+Y3 = 2*Y1 - Y2 + np.random.normal(size=100)
+data = pd.DataFrame({'Y1':Y1, 'Y2':Y2, 'Y3':Y3})
+
+
+# Run the Johansen test
+jres = coint_johansen(data,-1,1)
+eig = jres.eig
+evec = jres.evec
+
+hedge_ratio = evec[:, 0] / evec[0 ,0]
+
+#%%
