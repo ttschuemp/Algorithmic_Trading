@@ -175,8 +175,6 @@ if __name__ == "__main__":
     # Set the commission and the starting cash
     cerebro.broker.setcommission(commission=0.001)
     cerebro.broker.setcash(100000)
-    #slippage = 0.001
-    #cerebro.broker = btbroker.BackBroker(slip_perc=slippage)
 
     # Add analyzers
     cerebro.addanalyzer(bt.analyzers.TradeAnalyzer, _name='trade_analyzer')
@@ -185,17 +183,54 @@ if __name__ == "__main__":
     # Run the backtest
     results = cerebro.run()
 
+    final_value = cerebro.broker.getvalue()
+    print("Final portfolio value: ${}".format(final_value))
+
+    # Get the analyzers and print the results
+    trade_analyzer = results[0].analyzers.trade_analyzer.get_analysis()
+    print("Starting cash: ${}".format(cerebro.broker.startingcash))
+    print("Ending cash: ${}".format(cerebro.broker.getvalue()))
+    print("Total return: {:.2f}%".format(100*((cerebro.broker.getvalue()/cerebro.broker.startingcash)-1)))
+    print("Half-Live: " + str(window) + " hours")
+    print("Number of trades: {}".format(trade_analyzer.total.closed))
+    print("Winning Trades:", results[0].analyzers.trade_analyzer.get_analysis()['won']['total'])
+    print("Losing Trades:", results[0].analyzers.trade_analyzer.get_analysis()['lost']['total'])
+    print("Win Ratio:", results[0].analyzers.trade_analyzer.get_analysis()['won']['total'] /
+          trade_analyzer.total.closed)
+
+
     strategy_instance = results[0]
 
-    plt.plot(strategy_instance.hedge_ratio_history)
-    plt.title(f'Spread {list(tickers_pairs)}')
-
+    # Plot the spread, zscore, and hedge ratio
+    plt.subplot(4, 1, 1)
     plt.plot(strategy_instance.spread_history)
     plt.title(f'Spread {list(tickers_pairs)}')
 
+    plt.subplot(4, 1, 2)
     plt.plot(strategy_instance.zscore_history)
-    plt.title(f'Spread {list(tickers_pairs)}')
+    plt.axhline(strategy_instance.upper_bound, color='r')
+    plt.axhline(strategy_instance.lower_bound, color='r')
+    plt.title("Z-score")
+    plt.legend(["Z-score"])
 
+    plt.subplot(4, 1, 3)
+    plt.plot(strategy_instance.hedge_ratio_history)
+    plt.title("Hedge ratio")
+    plt.legend(["Hedge ratio"])
+
+    plt.tight_layout()
+    plt.savefig('strategy')
+    plt.show()
+
+    # create cerebro chart
+    cerebro.plot(iplot=True, volume=False)
+
+    # create quantstats charts & statistics html
+    portfolio_stats = strategy_instance.analyzers.getbyname('PyFolio')
+    returns, positions, transactions, gross_lev = portfolio_stats.get_pf_items()
+    returns.index = returns.index.tz_convert(None)
+
+    quantstats.reports.html(returns, output='stats.html', title='Backtrade Pairs')
 
 
 
