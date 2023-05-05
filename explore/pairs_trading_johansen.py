@@ -286,11 +286,14 @@ output_statistic['trace_stat'] >= crit_values_trace_stat['0.99']
 
 
 #%%
-
+data = data.iloc[:,:3]
+data = data.astype(float)
 
 result = coint_johansen(data,0,1)
 
-if result.lr1 > result.trace_stat_crit_vals:
+if np.all(result.lr1 > result.trace_stat_crit_vals):
+
+    print('True')
 
     hedge_ratio = result.evec[0] / result.evec[0][0]
 
@@ -301,6 +304,7 @@ if result.lr1 > result.trace_stat_crit_vals:
 #%%
 def find_cointegrated_pairs_johansen(data):
     ''' find from a list cointegrated pairs'''
+    data = data.astype(float)
     n = data.shape[1]
     keys = data.keys()
     pvalue_matrix = np.ones((n, n))
@@ -315,19 +319,28 @@ def find_cointegrated_pairs_johansen(data):
                 S3 = pd.to_numeric(data[keys[k]])
 
                 # Test for cointegration using Johansen's test
-                result = ts.coint_johansen(np.column_stack((S1, S2, S3)), det_order=0, k_ar_diff=1)
+                result = coint_johansen(np.column_stack((S1, S2, S3)), det_order=0, k_ar_diff=1)
 
                 # Check if the three time series are cointegrated
-                if result.lr1 > result.trace_stat_crit_vals:
+                if np.all(result.lr1 > result.trace_stat_crit_vals):
 
                     hedge_ratio = result.evec[0] / result.evec[0][0]
 
-                    pairs.append((keys[i], keys[j], keys[k], hedge_ratio))
+                    pairs.append((keys[i], keys[j], keys[k], hedge_ratio, result.lr1, result.trace_stat_crit_vals))
 
     # Sort cointegrated pairs by p-value in ascending order
     pairs.sort(key=lambda x: x[2])
 
-    return pd.DataFrame(pairs, columns=['Asset 1', 'Asset 2', 'Asset 3'])
+    return pd.DataFrame(pairs, columns=['Asset 1', 'Asset 2', 'Asset 3', 'hedge ratio', 'trace statistics', 'trace crit'])
 
 #%%
+if __name__ == "__main__":
+    days = 180
+    cerebro = bt.Cerebro()
 
+    # Fetch data and find cointegrated pairs
+    client = Client(api_key, api_secret)
+    data = fetch_crypto_data(30, days, client)
+    pairs = find_cointegrated_pairs_johansen(data)
+
+#%%
