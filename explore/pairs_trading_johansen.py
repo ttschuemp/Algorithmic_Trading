@@ -249,10 +249,85 @@ data = pd.DataFrame({'Y1':Y1, 'Y2':Y2, 'Y3':Y3})
 
 
 # Run the Johansen test
-jres = coint_johansen(data,-1,1)
-eig = jres.eig
-evec = jres.evec
+result = coint_johansen(data,0,1)
+eig = result.eig
+evec = result.evec
 
 hedge_ratio = evec[:, 0] / evec[0 ,0]
 
+
+output_statistic = pd.DataFrame([result.lr2,result.lr1],
+                      index=['max_eig_stat',"trace_stat"]).T
+
+crit_values_max_eig = pd.DataFrame(result.cvm, columns=['0.90', '0.95', '0.99'])
+crit_values_trace_stat = pd.DataFrame(result.cvt, columns=['0.90', '0.95', '0.99'])
+
+
+# test if r = 0 -> H0 there is no cointegration between the series -> can be rejected
+output_statistic['trace_stat'][0] > crit_values_trace_stat['0.99'][0]
+
+# test if r <= 1 -> H0 there is one or less cointegration relationships -> can be rejected so there are more than 1
+output_statistic['trace_stat'][1] > crit_values_trace_stat['0.99'][1]
+
+# test if r <= 2 -> H0 there is less than 2 cointegration relationsships -> can be rejected so rank of matrix is greater than 2
+# and we can conclude that there are 3 cointegrated series
+output_statistic['trace_stat'][2] > crit_values_trace_stat['0.99'][2]
+
+
+# get eigenvector for cointegrated portfolio
+result_eigvec = result.evec[0]
+
+
+output_statistic['trace_stat'] >= crit_values_trace_stat['0.99']
+
+
+
+
+
+
 #%%
+
+
+result = coint_johansen(data,0,1)
+
+if result.lr1 > result.trace_stat_crit_vals:
+
+    hedge_ratio = result.evec[0] / result.evec[0][0]
+
+
+
+
+
+#%%
+def find_cointegrated_pairs_johansen(data):
+    ''' find from a list cointegrated pairs'''
+    n = data.shape[1]
+    keys = data.keys()
+    pvalue_matrix = np.ones((n, n))
+    pairs = []
+
+    # Loop through each combination of assets
+    for i in range(n):
+        for j in range(i+1, n):
+            for k in range(j+1, n):
+                S1 = pd.to_numeric(data[keys[i]])
+                S2 = pd.to_numeric(data[keys[j]])
+                S3 = pd.to_numeric(data[keys[k]])
+
+                # Test for cointegration using Johansen's test
+                result = ts.coint_johansen(np.column_stack((S1, S2, S3)), det_order=0, k_ar_diff=1)
+
+                # Check if the three time series are cointegrated
+                if result.lr1 > result.trace_stat_crit_vals:
+
+                    hedge_ratio = result.evec[0] / result.evec[0][0]
+
+                    pairs.append((keys[i], keys[j], keys[k], hedge_ratio))
+
+    # Sort cointegrated pairs by p-value in ascending order
+    pairs.sort(key=lambda x: x[2])
+
+    return pd.DataFrame(pairs, columns=['Asset 1', 'Asset 2', 'Asset 3'])
+
+#%%
+
