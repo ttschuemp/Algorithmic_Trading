@@ -48,19 +48,17 @@ class PairsTrading(bt.Strategy):
 
         try:
 
-            result = coint_johansen(np.array([self.data_a, self.data_b]).T, det_order=0, k_ar_diff=1)
+            result = coint_johansen(np.array([data_a, data_b]).T, det_order=0, k_ar_diff=1)
             self.hedge_ratio = result.evec.T[0][1] / result.evec.T[0][0]
-            self.spread = self.data_a[0] - (self.hedge_ratio * self.data_b[0])
+            self.spread = data_a[-1] - (self.hedge_ratio * data_b[-1])
             self.hedge_ratio_history.append(self.hedge_ratio)
             self.spread_history.append(self.spread)
-            print(self.spread)
-            return(self.spread)
+            return self.spread
 
         except Exception as e:
 
             print(f"Error calculating hedge ratio: {e}")
             return None
-
 
 
 
@@ -70,15 +68,15 @@ class PairsTrading(bt.Strategy):
 
     def next(self):
 
-        #if len(self.data_a) >= self.window and len(self.data_b) >= self.window:
+        if len(self.data_a) >= self.window and len(self.data_b) >= self.window:
 
-        self.equity = self.broker.get_value()
-        #self.trade_size = self.equity * self.params.size / self.data_a[0]
+            self.equity = self.broker.get_value()
+            self.trade_size = self.equity * self.params.size / self.data_a[0]
 
-
-        self.spread = self.calc_hedge_ratio(self.data_a, self.data_b)
-
-        #self.log("Hedge ratio:".format(hedge_ratio))
+            data_a = self.data_a.get(size=self.window)
+            data_b = self.data_b.get(size=self.window)
+            self.spread = self.calc_hedge_ratio(data_a, data_b)
+            print(self.spread)
 
 
 
