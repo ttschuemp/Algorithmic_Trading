@@ -34,8 +34,15 @@ class PairsTrading(bt.Strategy):
         self.window = self.params.window
         self.hedge_ratio = None
         self.spread = None
+        self.zscore = None
+        self.upper_bound = self.params.std_dev
+        self.lower_bound = -self.params.std_dev
+        self.size = self.params.size
+        self.trade_size = 0
+
         self.hedge_ratio_history = []
         self.spread_history = []
+        self.zscore_history = []
 
 
 
@@ -53,7 +60,13 @@ class PairsTrading(bt.Strategy):
             self.spread = data_a[-1] - (self.hedge_ratio * data_b[-1])
             self.hedge_ratio_history.append(self.hedge_ratio)
             self.spread_history.append(self.spread)
-            return self.spread
+
+            spread_mean = pd.Series(self.spread_history).rolling(self.params.window).mean().iloc[-1]
+            spread_std_dev = pd.Series(self.spread_history).rolling(self.params.window).std().iloc[-1]
+            self.zscore = (self.spread - spread_mean) / spread_std_dev
+            self.zscore_history.append(self.zscore)
+
+            return self.zscore
 
         except Exception as e:
 
@@ -75,8 +88,49 @@ class PairsTrading(bt.Strategy):
 
             data_a = self.data_a.get(size=self.window)
             data_b = self.data_b.get(size=self.window)
-            self.spread = self.calc_hedge_ratio(data_a, data_b)
-            print(self.spread)
+            self.zscore = self.calc_hedge_ratio(data_a, data_b)
+
+            # Check if there is already an open trade
+            if self.getposition().size == 0:
+                if (self.zscore < self.lower_bound):
+                    # Buy the spread
+                    self.log("BUY SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0]))
+                    self.log("Z-SCORE: {}".format(self.zscore))
+                    self.log("Portfolio Value: {}".format(self.equity))
+                    #self.log("Hurst: {}".format(self.hurst_exponent))
+                    #self.log("Hurst 2: {}".format(self.hurst_exponent_2))
+                    #self.log("ADF P-Value: {}".format(adfuller(self.spread_history)[1]))
+                    self.order_target_size(self.datas[0], self.trade_size)
+                    self.order_target_size(self.datas[1], -self.hedge_ratio * self.trade_size)
+
+                elif (self.zscore > self.upper_bound):
+                    # Sell the spread
+                    self.log("SELL SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0]))
+                    self.log("Z-SCORE: {}".format(self.zscore))
+                    #self.log("Portfolio Value: {}".format(self.equity))
+                    #self.log("Hurst: {}".format(self.hurst_exponent))
+                    #self.log("Hurst 2: {}".format(self.hurst_exponent_2))
+                    #self.log("ADF P-Value: {}".format(adfuller(self.spread_history)[1]))
+                    self.order_target_size(self.datas[0], -self.trade_size)
+                    self.order_target_size(self.datas[1], self.hedge_ratio * self.trade_size)
+
+
+            # If there is an open trade, wait until the zscore crosses zero
+            elif self.getposition().size > 0 and self.zscore > 0:
+                self.log("CLOSE LONG SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0]))
+                self.log("Z-SCORE: {}".format(self.zscore))
+                self.log("Portfolio Value: {}".format(self.equity))
+                self.order_target_size(self.datas[0], 0)
+                self.order_target_size(self.datas[1], 0)
+
+
+            elif self.getposition().size < 0 and self.zscore < 0:
+                self.log("CLOSE SHORT SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0]))
+                self.log("Z-SCORE: {}".format(self.zscore))
+                self.log("Portfolio Value: {}".format(self.equity))
+                self.order_target_size(self.datas[0], 0)
+                self.order_target_size(self.datas[1], 0)
+
 
 
 
@@ -137,6 +191,9 @@ if __name__ == "__main__":
     plt.title(f'Spread {list(tickers_pairs)}')
 
     plt.plot(strategy_instance.spread_history)
+    plt.title(f'Spread {list(tickers_pairs)}')
+
+    plt.plot(strategy_instance.zscore_history)
     plt.title(f'Spread {list(tickers_pairs)}')
 
 
