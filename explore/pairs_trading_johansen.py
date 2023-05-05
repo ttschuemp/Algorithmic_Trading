@@ -53,16 +53,13 @@ class PairsTrading(bt.Strategy):
             self.spread = self.data_a[0] - (self.hedge_ratio * self.data_b[0])
             self.hedge_ratio_history.append(self.hedge_ratio)
             self.spread_history.append(self.spread)
+            print(self.spread)
             return(self.spread)
 
         except Exception as e:
 
             print(f"Error calculating hedge ratio: {e}")
             return None
-
-
-        print(self.spread)
-
 
 
 
