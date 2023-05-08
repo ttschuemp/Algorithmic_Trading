@@ -152,8 +152,8 @@ if __name__ == "__main__":
     data = fetch_crypto_data(30, days, client)
     pairs = find_cointegrated_pairs_hurst(data)
 
-    #window = int(pairs['Half Life'][0])
-    window = 1000
+    window = int(pairs['Half Life'][0])
+    #window = 1000
     std_dev = 1
     size = 0.02
 
@@ -291,7 +291,7 @@ data = data.astype(float)
 
 result = coint_johansen(data,0,1)
 
-if np.all(result.lr1 > result.trace_stat_crit_vals):
+if np.all(result.lr1 > result.trace_stat_crit_vals[:,0]):
 
     print('True')
 
@@ -322,16 +322,17 @@ def find_cointegrated_pairs_johansen(data):
                 result = coint_johansen(np.column_stack((S1, S2, S3)), det_order=0, k_ar_diff=1)
 
                 # Check if the three time series are cointegrated
-                if np.all(result.lr1 > result.trace_stat_crit_vals):
+                if np.all(result.lr1 > result.trace_stat_crit_vals[:,0]):
 
                     hedge_ratio = result.evec[0] / result.evec[0][0]
+                    sum_of_traces = np.sum(result.lr1)
 
-                    pairs.append((keys[i], keys[j], keys[k], hedge_ratio, result.lr1, result.trace_stat_crit_vals))
+                    pairs.append((keys[i], keys[j], keys[k], hedge_ratio, result.lr1, sum_of_traces))
 
     # Sort cointegrated pairs by p-value in ascending order
-    pairs.sort(key=lambda x: x[2])
+    pairs.sort(key=lambda x: x[5], reverse=True)
 
-    return pd.DataFrame(pairs, columns=['Asset 1', 'Asset 2', 'Asset 3', 'hedge ratio', 'trace statistics', 'trace crit'])
+    return pd.DataFrame(pairs, columns=['Asset 1', 'Asset 2', 'Asset 3', 'hedge ratio', 'trace statistics', 'sum of traces'])
 
 #%%
 if __name__ == "__main__":
