@@ -21,6 +21,8 @@ from src.api_key_secret import api_key, api_secret, path_zert
 from statsmodels.tsa.vector_ar.vecm import coint_johansen
 
 
+#%%
+
 class PairsTrading(bt.Strategy):
     params = (
         ("window", None),
@@ -158,11 +160,22 @@ class PairsTrading_2(bt.Strategy):
         self.hedge_ratio_history = []
         self.spread_history = []
         self.zscore_history = []
+        self.trade_returns = []
 
 
     def log(self, txt, dt=None):
         dt = dt or self.datas[0].datetime.date(0)
         print("{} {}".format(dt.isoformat(), txt))
+
+
+    def notify_trade(self, trade):
+        if trade.isclosed:
+            dt_format = '%Y-%m-%d %H:%M:%S'
+            dt = self.datas[0].datetime.datetime().strftime(dt_format)
+            trade_return = (trade.pnl / self.broker.get_value()) * 100
+            self.trade_returns.append(trade_return)
+            print(f'{dt} Trade PnL:', round(trade.pnl, 2))
+            print(f'{dt} Trade Return:', round(trade_return, 2), '%')
 
 
     def calc_hedge_ratio(self, data_a, data_b, data_c):
@@ -173,6 +186,7 @@ class PairsTrading_2(bt.Strategy):
 
             self.hedge_ratio = result.evec[0] / result.evec[0][0]
             self.spread = data_a[-1] * self.hedge_ratio[0] + data_b[-1] * self.hedge_ratio[1] + data_c[-1] * self.hedge_ratio[2]
+
             self.hedge_ratio_history.append(self.hedge_ratio)
             self.spread_history.append(self.spread)
 
@@ -199,56 +213,63 @@ class PairsTrading_2(bt.Strategy):
         if len(self.data_a) >= self.window and len(self.data_b) >= self.window and len(self.data_c) >= self.window:
 
             self.equity = self.broker.get_value()
-            self.trade_size = self.equity * self.params.size / self.data_a[0]
+            self.trade_size = self.equity * self.params.size
 
             data_a = self.data_a.get(size=self.window)
             data_b = self.data_b.get(size=self.window)
             data_c = self.data_c.get(size=self.window)
             self.zscore = self.calc_hedge_ratio(data_a, data_b, data_c)
 
+            print(f'This is the position {self.getposition().size}')
+
             # Check if there is already an open trade
             if self.getposition().size == 0:
                 if (self.zscore < self.lower_bound):
                     # Buy the spread
-                    self.log("BUY SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0], self.data_c[0]))
+                    self.log("BUY SPREAD: A {} B {} C {}".format(self.data_a[0], self.data_b[0], self.data_c[0]))
                     self.log("Z-SCORE: {}".format(self.zscore))
                     self.log("Portfolio Value: {}".format(self.equity))
 
-                    self.order_target_size(self.datas[0], self.trade_size)
-                    self.order_target_size(self.datas[1], self.hedge_ratio[1] * self.trade_size)
-                    self.order_target_size(self.datas[2], self.hedge_ratio[2] * self.trade_size)
+                    self.order_target_size(price=self.data_a[0], target=self.trade_size/self.data_a[0])
+                    self.order_target_size(price=self.data_b[0], target=self.trade_size/(self.data_b[0] * self.hedge_ratio[1]))
+                    self.order_target_size(price=self.data_c[0], target=self.trade_size/(self.data_c[0] * self.hedge_ratio[2]))
 
                 elif (self.zscore > self.upper_bound):
                     # Sell the spread
-                    self.log("SELL SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0], self.data_c[0]))
+                    self.log("SELL SPREAD: A {} B {} C {}".format(self.data_a[0], self.data_b[0], self.data_c[0]))
                     self.log("Z-SCORE: {}".format(self.zscore))
 
-                    self.order_target_size(self.datas[0], -self.trade_size)
-                    self.order_target_size(self.datas[1], -self.hedge_ratio[1] * self.trade_size)
-                    self.order_target_size(self.datas[2], -self.hedge_ratio[2] * self.trade_size)
+                    self.order_target_size(price=self.data_a[0], target=-self.trade_size/self.data_a[0])
+                    self.order_target_size(price=self.data_b[0], target=-self.trade_size/(self.data_b[0] * self.hedge_ratio[1]))
+                    self.order_target_size(price=self.data_c[0], target=-self.trade_size/(self.data_c[0] * self.hedge_ratio[2]))
 
 
             # If there is an open trade, wait until the zscore crosses zero
             elif self.getposition().size > 0 and self.zscore > 0:
-                self.log("CLOSE LONG SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0], self.data_c[0]))
+                self.log("CLOSE LONG SPREAD: A {} B {} C {}".format(self.data_a[0], self.data_b[0], self.data_c[0]))
                 self.log("Z-SCORE: {}".format(self.zscore))
                 self.log("Portfolio Value: {}".format(self.equity))
-                self.order_target_size(self.datas[0], 0)
-                self.order_target_size(self.datas[1], 0)
-                self.order_target_size(self.datas[2], 0)
+                self.order_target_size(price=self.data_a[0], target=0)
+                self.order_target_size(price=self.data_b[0], target=0)
+                self.order_target_size(price=self.data_c[0], target=0)
 
 
             elif self.getposition().size < 0 and self.zscore < 0:
-                self.log("CLOSE SHORT SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0], self.data_c[0]))
+                self.log("CLOSE SHORT SPREAD: A {} B {} C {}".format(self.data_a[0], self.data_b[0], self.data_c[0]))
                 self.log("Z-SCORE: {}".format(self.zscore))
                 self.log("Portfolio Value: {}".format(self.equity))
-                self.order_target_size(self.datas[0], 0)
-                self.order_target_size(self.datas[1], 0)
-                self.order_target_size(self.datas[2], 0)
+                self.order_target_size(price=self.data_a[0], target=0)
+                self.order_target_size(price=self.data_b[0], target=0)
+                self.order_target_size(price=self.data_c[0], target=0)
 
 
 
 #%%
+
+
+# try using log returns!!!!
+# https://medium.com/@financialnoob/cointegration-based-multivariate-statistical-arbitrage-339adcbe314
+
 
 # using 2 series
 
@@ -395,24 +416,6 @@ output_statistic['trace_stat'] >= crit_values_trace_stat['0.99']
 
 
 
-
-
-#%%
-data = data.iloc[:,:3]
-data = data.astype(float)
-
-result = coint_johansen(data,0,1)
-
-if np.all(result.lr1 > result.trace_stat_crit_vals[:,0]):
-
-    print('True')
-
-    hedge_ratio = result.evec[0] / result.evec[0][0]
-
-
-
-
-
 #%%
 def find_cointegrated_pairs_johansen(data):
     ''' find from a list cointegrated pairs'''
@@ -479,9 +482,9 @@ if __name__ == "__main__":
     pairs = find_cointegrated_pairs_johansen(data)
 
     window = int(pairs['half life'][0])
-    #window = 150
+    #window = 1000
     std_dev = 1
-    size = 0.02
+    size = 0.01
 
     # Choose the pair with the smallest p-value
     tickers_pairs = pairs.iloc[0, 0:3]
