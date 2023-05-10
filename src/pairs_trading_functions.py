@@ -100,6 +100,59 @@ def find_cointegrated_pairs_hurst(data):
 
     return pd.DataFrame(pairs, columns=['Asset 1', 'Asset 2', 'P-value', 'Half Life', 'Hurst', 'Hurst 2'])
 
+def find_cointegrated_pairs_johansen(data):
+    ''' find from a list cointegrated pairs'''
+    data = data.astype(float)
+    n = data.shape[1]
+    keys = data.keys()
+    pvalue_matrix = np.ones((n, n))
+    pairs = []
+
+    # Loop through each combination of assets
+    for i in range(n):
+        for j in range(i+1, n):
+            for k in range(j+1, n):
+                S1 = pd.to_numeric(data[keys[i]])
+                S2 = pd.to_numeric(data[keys[j]])
+                S3 = pd.to_numeric(data[keys[k]])
+
+                # Test for cointegration using Johansen's test
+                result = coint_johansen(np.column_stack((S1, S2, S3)), det_order=0, k_ar_diff=1)
+
+                # Check if the three time series are cointegrated
+                if np.all(result.lr1 > result.trace_stat_crit_vals[:,0]):
+
+                    hedge_ratio = result.evec[0] / result.evec[0][0]
+                    sum_of_traces = np.sum(result.lr1)
+
+                    # calc spread
+                    spread = S1 * hedge_ratio[0] + S2 * hedge_ratio[1] + S3 * hedge_ratio[2]
+
+                    # calc half life
+                    prevz = spread.shift()
+                    dz = spread-prevz
+                    dz = dz[1:,]
+                    prevz = prevz[1:,]
+                    model2 = sm.OLS(dz, prevz-np.mean(prevz))
+                    results2 = model2.fit()
+                    theta = results2.params
+                    half_life = -np.log(2)/theta
+
+                    lags = range(2, len(spread)//2)
+                    tau = [np.sqrt(np.abs(pd.Series(spread) - pd.Series(spread).shift(lag)).dropna().var()) for lag in lags]
+                    poly = np.polyfit(np.log(lags), np.log(tau), 1)
+                    hurst_exp = poly[0] * 2
+
+                    hurst_2, c, data_2 = compute_Hc(spread, kind='change', simplified=True)
+
+                    pairs.append((keys[i], keys[j], keys[k], sum_of_traces, half_life.values, hurst_exp, hurst_2))
+
+    # Sort cointegrated pairs by p-value in ascending order
+    pairs.sort(key=lambda x: x[3], reverse=True)
+
+    return pd.DataFrame(pairs, columns=['Asset 1', 'Asset 2', 'Asset 3',
+                                        'sum of traces', 'half life', 'hurst exp 1',
+                                        'hurst exp 2'])
 
 def calc_dynamic_hedge_ratio_ols(data, window):
     """
