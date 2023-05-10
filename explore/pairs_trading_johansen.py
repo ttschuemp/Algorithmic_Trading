@@ -164,7 +164,8 @@ class PairsTrading_2(bt.Strategy):
 
 
     def log(self, txt, dt=None):
-        dt = dt or self.datas[0].datetime.date(0)
+        dt_format = '%Y-%m-%d %H:%M:%S'
+        dt = dt or self.datas[0].datetime.datetime().strftime(dt_format)
         print("{} {}".format(dt.isoformat(), txt))
 
 
