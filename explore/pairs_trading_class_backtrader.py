@@ -94,7 +94,7 @@ class PairsTrading(bt.Strategy):
 
 
     def next(self):
-
+        # the trade_size part is not correct
         self.equity = self.broker.get_value()
         self.trade_size = self.equity * self.params.size / self.data_a[0]
         self.calc_hedge_ratio()
