@@ -164,9 +164,10 @@ class PairsTrading_2(bt.Strategy):
 
 
     def log(self, txt, dt=None):
-        dt_format = '%Y-%m-%d %H:%M:%S'
-        dt = dt or self.datas[0].datetime.datetime().strftime(dt_format)
-        print("{} {}".format(dt.isoformat(), txt))
+        ''' Logging function fot this strategy'''
+        dt = dt or self.datas[0].datetime.date(0)
+        dt1 = self.datas[0].datetime.time(0)
+        print('%s,%s, %s' % (dt.isoformat(),dt1.isoformat(), txt))
 
 
     def notify_trade(self, trade):
@@ -221,7 +222,9 @@ class PairsTrading_2(bt.Strategy):
             data_c = self.data_c.get(size=self.window)
             self.zscore = self.calc_hedge_ratio(data_a, data_b, data_c)
 
-            print(f'This is the position {self.getposition().size}')
+            #print(f'This is the position 1 {self.getposition()[0].size}')
+            #print(f'This is the position 2 {self.getposition()[0].size}')
+            #print(f'This is the position 3 {self.getposition()[0].size}')
 
             # Check if there is already an open trade
             if self.getposition().size == 0:
@@ -235,6 +238,7 @@ class PairsTrading_2(bt.Strategy):
                     self.order_target_size(price=self.data_b[0], target=self.trade_size/(self.data_b[0] * self.hedge_ratio[1]))
                     self.order_target_size(price=self.data_c[0], target=self.trade_size/(self.data_c[0] * self.hedge_ratio[2]))
 
+
                 elif (self.zscore > self.upper_bound):
                     # Sell the spread
                     self.log("SELL SPREAD: A {} B {} C {}".format(self.data_a[0], self.data_b[0], self.data_c[0]))
@@ -244,24 +248,23 @@ class PairsTrading_2(bt.Strategy):
                     self.order_target_size(price=self.data_b[0], target=-self.trade_size/(self.data_b[0] * self.hedge_ratio[1]))
                     self.order_target_size(price=self.data_c[0], target=-self.trade_size/(self.data_c[0] * self.hedge_ratio[2]))
 
-
             # If there is an open trade, wait until the zscore crosses zero
             elif self.getposition().size > 0 and self.zscore > 0:
                 self.log("CLOSE LONG SPREAD: A {} B {} C {}".format(self.data_a[0], self.data_b[0], self.data_c[0]))
                 self.log("Z-SCORE: {}".format(self.zscore))
                 self.log("Portfolio Value: {}".format(self.equity))
-                self.order_target_size(price=self.data_a[0], target=0)
-                self.order_target_size(price=self.data_b[0], target=0)
-                self.order_target_size(price=self.data_c[0], target=0)
+                self.order_target_size(self.datas[0], 0)
+                self.order_target_size(self.datas[1], 0)
+                self.order_target_size(self.datas[2], 0)
 
 
             elif self.getposition().size < 0 and self.zscore < 0:
                 self.log("CLOSE SHORT SPREAD: A {} B {} C {}".format(self.data_a[0], self.data_b[0], self.data_c[0]))
                 self.log("Z-SCORE: {}".format(self.zscore))
                 self.log("Portfolio Value: {}".format(self.equity))
-                self.order_target_size(price=self.data_a[0], target=0)
-                self.order_target_size(price=self.data_b[0], target=0)
-                self.order_target_size(price=self.data_c[0], target=0)
+                self.order_target_size(self.datas[0], 0)
+                self.order_target_size(self.datas[1], 0)
+                self.order_target_size(self.datas[2], 0)
 
 
 
@@ -484,7 +487,7 @@ if __name__ == "__main__":
 
     window = int(pairs['half life'][0])
     #window = 1000
-    std_dev = 1
+    std_dev = 2
     size = 0.01
 
     # Choose the pair with the smallest p-value
