@@ -9,11 +9,12 @@ import backtrader as bt
 
 if __name__ == "__main__":
 
+    days = 10
     cerebro = bt.Cerebro()
 
     client = Client(api_key,api_secret, {"verify": path_zert})
-    client.API_URL = 'https://testnet.binance.vision/api'
-    data = fetch_crypto_data(50, 90, client)
+    #client.API_URL = 'https://testnet.binance.vision/api'
+    data = fetch_crypto_data(10, days, client)
 
     pairs = find_cointegrated_pairs(data)
 
@@ -21,8 +22,10 @@ if __name__ == "__main__":
     tickers_pairs = pairs.iloc[0,0:2]
 
     # get data for pair
-    data0 = fetch_data(tickers_pairs[0], '1h', '24', client)
-    data1 = fetch_data(tickers_pairs[1], '1h', '24', client)
+    data0 = fetch_data(tickers_pairs[0], '1h', str(days * 24), client)
+    data1 = fetch_data(tickers_pairs[1], '1h', str(days * 24), client)
+
+
 
     data0 = bt.feeds.PandasData(dataname=pd.DataFrame(data0))
     data1 = bt.feeds.PandasData(dataname=pd.DataFrame(data1))
@@ -40,6 +43,8 @@ if __name__ == "__main__":
 #    stake=10
     qty1=0
     qty2=0
+    window=30
+    std_dev=1
     printout=True
     upper=2.1
     lower=-2.1
@@ -57,6 +62,8 @@ if __name__ == "__main__":
                           #stake=stake,
                           qty1=qty1,
                           qty2=qty2,
+                          window=window,
+                          std_dev=std_dev,
                           printout=printout,
                           upper=upper,
                           lower=lower,
@@ -81,4 +88,39 @@ if __name__ == "__main__":
     # Plot if requested
     #cerebro.plot(volume=False, zdown=False)
 
+
 #%%
+
+if __name__ == "__main__":
+
+    days = 10
+    #cerebro = bt.Cerebro()
+
+    client = Client(api_key,api_secret, {"verify": path_zert})
+    #client.API_URL = 'https://testnet.binance.vision/api'
+    data = fetch_crypto_data(10, days, client)
+
+    pairs = find_cointegrated_pairs(data)
+
+    # choose pair wits smallest p-value in pairs
+    tickers_pairs = pairs.iloc[0,0:2]
+
+    # get data for pair
+    data0 = fetch_data(tickers_pairs[0], '1h', str(days * 24), client)
+    data1 = fetch_data(tickers_pairs[1], '1h', str(days * 24), client)
+
+    strategy = PairTradingStrategy(period=period,
+                                   #stake=stake,
+                                   qty1=qty1,
+                                   qty2=qty2,
+                                   window=window,
+                                   std_dev=std_dev,
+                                   printout=printout,
+                                   upper=upper,
+                                   lower=lower,
+                                   up_medium=up_medium,
+                                   low_medium=low_medium,
+                                   status=status,
+                                   data0=data0,
+                                   data1=data1,
+                                   portfolio_value=portfolio_value)
