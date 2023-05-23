@@ -15,7 +15,7 @@ from statsmodels.tsa.stattools import adfuller
 from src.load_data import fetch_crypto_data, fetch_data
 from src.pairs_trading_functions import*
 from binance import Client
-from src.api_key_secret import api_key, api_secret, path_zert
+from src.api_key_secret import api_key, api_secret#, path_zert
 
 
 class PairsTrading(bt.Strategy):
