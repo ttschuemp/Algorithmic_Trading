@@ -154,6 +154,7 @@ def find_cointegrated_pairs_johansen(data):
                                         'sum of traces', 'half life', 'hurst exp 1',
                                         'hurst exp 2'])
 
+
 def calc_dynamic_hedge_ratio_ols(data, window):
     """
     Calculates rolling hedge ratio using OLS

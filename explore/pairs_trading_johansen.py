@@ -487,8 +487,8 @@ if __name__ == "__main__":
 
     window = int(pairs['half life'][0])
     #window = 1000
-    std_dev = 2
-    size = 0.01
+    std_dev = 1
+    size = 0.02
 
     # Choose the pair with the smallest p-value
     tickers_pairs = pairs.iloc[0, 0:3]

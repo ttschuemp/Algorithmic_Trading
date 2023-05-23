@@ -124,7 +124,7 @@ class PairsTrading(bt.Strategy):
                         self.order_target_size(self.datas[1], self.hedge_ratio * self.trade_size)
 
 
-                # If there is an open trade, wait until the zscore crosses zero
+                    # If there is an open trade, wait until the zscore crosses zero
                 elif self.getposition().size > 0 and self.zscore > 0:
                     self.log("CLOSE LONG SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0]))
                     self.log("Z-SCORE: {}".format(self.zscore))
