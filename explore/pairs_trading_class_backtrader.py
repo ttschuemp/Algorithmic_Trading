@@ -156,8 +156,8 @@ if __name__ == "__main__":
     data = fetch_crypto_data(50, days, client)
     pairs = find_cointegrated_pairs_hurst(data)
 
-    window = int(pairs['Half Life'][0])
-    #window = 150
+    #window = int(pairs['Half Life'][0])
+    window = 150
     std_dev = 1
     size = 0.02
 
