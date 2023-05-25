@@ -1,84 +1,108 @@
 import pandas as pd
-from src.pairs_trading_backtrader import PairTradingStrategy
-from src.pairs_trading_functions import find_cointegrated_pairs
+from src.pairs_trading_backtrader import PairsTrading
+from src.pairs_trading_functions import find_cointegrated_pairs_hurst
 from src.load_data import fetch_crypto_data, fetch_data
 from binance import Client
-from src.api_key_secret import api_key, api_secret, path_zert
+from src.api_key_secret import api_key, api_secret #, path_zert
 import backtrader as bt
+import matplotlib.pyplot as plt
+import quantstats
+import os
 
 
 if __name__ == "__main__":
-
+    
+    days = 700
+    interval = '1h'
+    lookback = '4' # in hours
     cerebro = bt.Cerebro()
 
-    client = Client(api_key,api_secret, {"verify": path_zert})
-    client.API_URL = 'https://testnet.binance.vision/api'
-    data = fetch_crypto_data(50, 90, client)
+    # Fetch data and find cointegrated pairs
+    client = Client(api_key, api_secret)
+    data = fetch_crypto_data(10, days, client)
+    pairs = find_cointegrated_pairs_hurst(data)
 
-    pairs = find_cointegrated_pairs(data)
+    window = int(pairs['Half Life'][0])
+    window = 7
+    std_dev = 0.75
+    size = 0.02
 
-    # choose pair wits smallest p-value in pairs
-    tickers_pairs = pairs.iloc[0,0:2]
+    # Choose the pair with the smallest p-value
+    tickers_pairs = pairs.iloc[0, 0:2]
+    print(f'trading pair: ' + str(tickers_pairs))
 
-    # get data for pair
-    data0 = fetch_data(tickers_pairs[0], '1h', '24', client)
-    data1 = fetch_data(tickers_pairs[1], '1h', '24', client)
-
-    data0 = bt.feeds.PandasData(dataname=pd.DataFrame(data0))
-    data1 = bt.feeds.PandasData(dataname=pd.DataFrame(data1))
+    # Fetch data for the chosen pair
+    data_df0 = fetch_data(tickers_pairs[0], interval, lookback, client)
+    data_df1 = fetch_data(tickers_pairs[1], interval, lookback, client)
+    data0 = bt.feeds.PandasData(dataname=pd.DataFrame(data_df0))
+    data1 = bt.feeds.PandasData(dataname=pd.DataFrame(data_df1))
     cerebro.adddata(data0)
     cerebro.adddata(data1)
 
-    # Check if data feeds were added
-    if len(cerebro.datas) == 2:
-        print('Data feeds added successfully')
-    else:
-        print('Error: Data feeds not added')
+    # Add the strategy
+    cerebro.addstrategy(PairsTrading, window=window, std_dev=std_dev, size=size)
 
-    # params
-    period=10
-#    stake=10
-    qty1=0
-    qty2=0
-    printout=True
-    upper=2.1
-    lower=-2.1
-    up_medium=0.5
-    low_medium=-0.5
-    status=0
-    portfolio_value=10000
-    cash = 10000
-    commission = 0.005
-    
-    #cerebro.addstrategy(MyStrategy)
-     # Add the strategy
-    cerebro.addstrategy(PairTradingStrategy,
-                          period=period,
-                          #stake=stake,
-                          qty1=qty1,
-                          qty2=qty2,
-                          printout=printout,
-                          upper=upper,
-                          lower=lower,
-                          up_medium=up_medium,
-                          low_medium=low_medium,
-                          status=status,
-                          #data0=data0,
-                          #data1=data1,
-                          portfolio_value=portfolio_value)
+    # Set the commission and the starting cash
+    cerebro.broker.setcommission(commission=0.001)
+    cerebro.broker.setcash(1000)
 
-    # Add the commission - only stocks like a for each operation
-    cerebro.broker.setcash(cash)
+    # Add analyzers
+    cerebro.addanalyzer(bt.analyzers.TradeAnalyzer, _name='trade_analyzer')
+    cerebro.addanalyzer(bt.analyzers.PyFolio, _name='PyFolio')
 
-    # Add the commission - only stocks like a for each operation
-    cerebro.broker.setcommission(commission=commission)
+    # Run the backtest
+    results = cerebro.run()
 
-    # And run it
-    cerebro.run(runonce=False,
-                preload=True,
-                oldsync=True)
-    
-    # Plot if requested
-    #cerebro.plot(volume=False, zdown=False)
+    # Print the final portfolio value
+    final_value = cerebro.broker.getvalue()
+    print("Final portfolio value: ${}".format(final_value))
 
-#%%
+    # Get the analyzers and print the results
+    trade_analyzer = results[0].analyzers.trade_analyzer.get_analysis()
+    print("Starting cash: ${}".format(cerebro.broker.startingcash))
+    print("Ending cash: ${}".format(cerebro.broker.getvalue()))
+    print("Total return: {:.2f}%".format(100*((cerebro.broker.getvalue()/cerebro.broker.startingcash)-1)))
+    print("Half-Live: " + str(window) + " hours")
+    print("Number of trades: {}".format(trade_analyzer.total.closed))
+    print("Winning Trades:", results[0].analyzers.trade_analyzer.get_analysis()['won']['total'])
+    print("Losing Trades:", results[0].analyzers.trade_analyzer.get_analysis()['lost']['total'])
+
+    # Get the strategy instance
+    strategy_instance = results[0]
+
+    # Plot the spread, zscore, and hedge ratio
+    plt.subplot(3, 1, 1)
+    plt.plot(strategy_instance.spread_history_full)
+    plt.title(f'Spread {list(tickers_pairs)}')
+
+    plt.subplot(3, 1, 2)
+    plt.plot(strategy_instance.zscore_history)
+    plt.axhline(strategy_instance.upper_bound, color='r')
+    plt.axhline(strategy_instance.lower_bound, color='r')
+    plt.title("Z-score")
+    plt.legend(["Z-score"])
+
+    plt.subplot(3, 1, 3)
+    plt.plot(strategy_instance.hedge_ratio_history)
+    plt.title("Hedge ratio")
+    plt.legend(["Hedge ratio"])
+
+    plt.tight_layout()
+    plt.show()
+
+    # create cerebro chart
+    cerebro.plot(iplot=True, volume=False)
+
+    # create quantstats charts & statistics html
+    portfolio_stats = strategy_instance.analyzers.getbyname('PyFolio')
+    returns, positions, transactions, gross_lev = portfolio_stats.get_pf_items()
+    returns.index = returns.index.tz_convert(None)
+
+    with open('stats.html', 'w') as f:
+        f.write(quantstats.reports.html(returns, title='Backtrade Pairs'))
+
+    if not os.path.exists('report'):
+        os.makedirs('report')
+
+    os.rename('stats.html', 'report/stats.html')
+
