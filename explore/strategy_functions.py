@@ -73,7 +73,7 @@ def hurst(df_series):
     lags = range(2, 100)
 
     # Calculate the array of the variances of the lagged differences
-    tau = tau = [np.sqrt((df_series - df_series.shift(-lag)).std()) for lag in lags]
+    tau = [np.sqrt((df_series - df_series.shift(-lag)).std()) for lag in lags]
 
     # Use a linear fit to estimate the Hurst Exponent
     poly = np.polyfit(np.log(lags), np.log(tau), 1)
