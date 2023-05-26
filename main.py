@@ -17,12 +17,12 @@ if __name__ == "__main__":
 
     # Fetch data and find cointegrated pairs
     client = Client(api_key, api_secret)
-    data = fetch_crypto_data(50, days, client)
+    data = fetch_crypto_data(20, days, client)
     pairs = find_cointegrated_pairs_hurst(data)
 
-    window = int(pairs['Half Life'][0])
-    #window = 150
-    std_dev = 1
+    window = int(pairs['Half Life'][0]) 
+    window = 120
+    std_dev = 0.4
     size = 0.02
 
     # Choose the pair with the smallest p-value

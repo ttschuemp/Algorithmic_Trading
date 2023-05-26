@@ -4,15 +4,17 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 import backtrader as bt
 import backtrader.indicators as btind
+import numpy as np
 import statsmodels.api as sm
 import statsmodels.tsa.stattools as ts
-import pandas as pd
-import numpy as np
+import quantstats
 import collections
-from binance import Client
+import matplotlib.pyplot as plt
+import pandas as pd
 from statsmodels.tsa.stattools import adfuller
-from src.api_key_secret import api_key, api_secret #, path_zert
-
+import backtrader.broker as btbroker
+from binance import Client
+from hurst import compute_Hc, random_walk
 
 
 class PairsTrading(bt.Strategy):
@@ -52,7 +54,7 @@ class PairsTrading(bt.Strategy):
 
 
     def calc_hedge_ratio(self):
-
+        #print('calc_hedge_ratio')
         hedge_ratio = self.ols_slope.slope[0]
         spread = self.data_a[0] - (hedge_ratio * self.data_b[0])
         self.spread_history.append(spread)
@@ -66,8 +68,8 @@ class PairsTrading(bt.Strategy):
         self.hedge_ratio_history.append(hedge_ratio)
 
         # calc hurst exponent
-        if len(self.spread_history) >= self.params.window:
-        
+        #print('self.spread_history: ', len(self.spread_history), '>=' , self.params.window)
+        if len(self.spread_history) >= self.params.window and len(self.spread_history) >= 100: # compute_Hc() needs at least 100 data points
             #lags = range(2, len(self.spread_history) // 2)
         
             # Calculate the array of the variances of the lagged differences
@@ -90,50 +92,51 @@ class PairsTrading(bt.Strategy):
 
 
     def next(self):
+        #print('next')
         # the trade_size part is not correct
         self.equity = self.broker.get_value()
         self.trade_size = self.equity * self.params.size / self.data_a[0]
         self.calc_hedge_ratio()
 
-                # Check if there is already an open trade
-                if self.getposition().size == 0:
-                    if (self.zscore < self.lower_bound) and (0 < self.hurst_exponent < 1):
-                        # Buy the spread
-                        self.log("BUY SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0]))
-                        self.log("Z-SCORE: {}".format(self.zscore))
-                        self.log("Portfolio Value: {}".format(self.equity))
-                        self.log("Hurst: {}".format(self.hurst_exponent))
-                        #self.log("Hurst 2: {}".format(self.hurst_exponent_2))
-                        self.log("ADF P-Value: {}".format(adfuller(self.spread_history)[1]))
-                        self.order_target_size(self.datas[0], self.trade_size)
-                        self.order_target_size(self.datas[1], -self.hedge_ratio * self.trade_size)
+        # Check if there is already an open trade
+        if self.getposition().size == 0:
+            #print('zscore: ', self.zscore, '<' , self.lower_bound)
+            if (self.zscore < self.lower_bound) and (0 < self.hurst_exponent < 1):
+                # Buy the spread
+                self.log("BUY SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0]))
+                self.log("Z-SCORE: {}".format(self.zscore))
+                self.log("Portfolio Value: {}".format(self.equity))
+                self.log("Hurst: {}".format(self.hurst_exponent))
+                #self.log("Hurst 2: {}".format(self.hurst_exponent_2))
+                self.log("ADF P-Value: {}".format(adfuller(self.spread_history)[1]))
+                self.order_target_size(self.datas[0], self.trade_size)
+                self.order_target_size(self.datas[1], -self.hedge_ratio * self.trade_size)
 
-                    elif (self.zscore > self.upper_bound) and (0 < self.hurst_exponent < 1):
-                        # Sell the spread
-                        self.log("SELL SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0]))
-                        self.log("Z-SCORE: {}".format(self.zscore))
-                        self.log("Portfolio Value: {}".format(self.equity))
-                        self.log("Hurst: {}".format(self.hurst_exponent))
-                        #self.log("Hurst 2: {}".format(self.hurst_exponent_2))
-                        self.log("ADF P-Value: {}".format(adfuller(self.spread_history)[1]))
-                        self.order_target_size(self.datas[0], -self.trade_size)
-                        self.order_target_size(self.datas[1], self.hedge_ratio * self.trade_size)
+            elif (self.zscore > self.upper_bound) and (0 < self.hurst_exponent < 1):
+                # Sell the spread
+                self.log("SELL SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0]))
+                self.log("Z-SCORE: {}".format(self.zscore))
+                self.log("Portfolio Value: {}".format(self.equity))
+                self.log("Hurst: {}".format(self.hurst_exponent))
+                #self.log("Hurst 2: {}".format(self.hurst_exponent_2))
+                self.log("ADF P-Value: {}".format(adfuller(self.spread_history)[1]))
+                self.order_target_size(self.datas[0], -self.trade_size)
+                self.order_target_size(self.datas[1], self.hedge_ratio * self.trade_size)
+
+        # If there is an open trade, wait until the zscore crosses zero
+        elif self.getposition().size > 0 and self.zscore > 0:
+            self.log("CLOSE LONG SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0]))
+            self.log("Z-SCORE: {}".format(self.zscore))
+            self.log("Portfolio Value: {}".format(self.equity))
+            self.order_target_size(self.datas[0], 0)
+            self.order_target_size(self.datas[1], 0)
 
 
-                # If there is an open trade, wait until the zscore crosses zero
-                elif self.getposition().size > 0 and self.zscore > 0:
-                    self.log("CLOSE LONG SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0]))
-                    self.log("Z-SCORE: {}".format(self.zscore))
-                    self.log("Portfolio Value: {}".format(self.equity))
-                    self.order_target_size(self.datas[0], 0)
-                    self.order_target_size(self.datas[1], 0)
-
-
-                elif self.getposition().size < 0 and self.zscore < 0:
-                    self.log("CLOSE SHORT SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0]))
-                    self.log("Z-SCORE: {}".format(self.zscore))
-                    self.log("Portfolio Value: {}".format(self.equity))
-                    self.order_target_size(self.datas[0], 0)
-                    self.order_target_size(self.datas[1], 0)
+        elif self.getposition().size < 0 and self.zscore < 0:
+            self.log("CLOSE SHORT SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0]))
+            self.log("Z-SCORE: {}".format(self.zscore))
+            self.log("Portfolio Value: {}".format(self.equity))
+            self.order_target_size(self.datas[0], 0)
+            self.order_target_size(self.datas[1], 0)
 
 #%%
