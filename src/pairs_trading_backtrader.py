@@ -4,15 +4,17 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 import backtrader as bt
 import backtrader.indicators as btind
+import numpy as np
 import statsmodels.api as sm
 import statsmodels.tsa.stattools as ts
-import pandas as pd
-import numpy as np
+import quantstats
 import collections
-from binance import Client
+import matplotlib.pyplot as plt
+import pandas as pd
 from statsmodels.tsa.stattools import adfuller
-from src.api_key_secret import api_key, api_secret #, path_zert
-
+import backtrader.broker as btbroker
+from binance import Client
+from hurst import compute_Hc, random_walk
 
 
 class PairsTrading(bt.Strategy):
@@ -38,19 +40,23 @@ class PairsTrading(bt.Strategy):
         self.spread_history_full = []
         self.zscore_history = []
         self.hedge_ratio_history = []
+        self.hurst_history_1 = []
+        self.hurst_history_2 = []
 
         self.ols_slope = btind.OLS_Slope_InterceptN(self.data_a, self.data_b, period=self.params.window)
         self.hurst_exponent = None
+        self.hurst_exponent_2 = None
+
+
     def log(self, txt, dt=None):
         dt = dt or self.datas[0].datetime.date(0)
         print("{} {}".format(dt.isoformat(), txt))
 
 
     def calc_hedge_ratio(self):
-
+        #print('calc_hedge_ratio')
         hedge_ratio = self.ols_slope.slope[0]
         spread = self.data_a[0] - (hedge_ratio * self.data_b[0])
-        #print(f'spread: ' +str(spread))
         self.spread_history.append(spread)
         spread_mean = pd.Series(self.spread_history).rolling(self.params.window).mean().iloc[-1]
         spread_std_dev = pd.Series(self.spread_history).rolling(self.params.window).std().iloc[-1]
@@ -62,16 +68,23 @@ class PairsTrading(bt.Strategy):
         self.hedge_ratio_history.append(hedge_ratio)
 
         # calc hurst exponent
-        if len(self.spread_history) >= self.params.window:
-
-            lags = range(2, self.params.window // 2)
-
+        #print('self.spread_history: ', len(self.spread_history), '>=' , self.params.window)
+        if len(self.spread_history) >= self.params.window and len(self.spread_history) >= 100: # compute_Hc() needs at least 100 data points
+            #lags = range(2, len(self.spread_history) // 2)
+        
             # Calculate the array of the variances of the lagged differences
-            tau = [np.sqrt(np.abs(pd.Series(self.spread_history) - pd.Series(self.spread_history).shift(lag)).dropna().var()) for lag in lags]
-
+            #tau = [np.sqrt(np.abs((self.spread_history_full) - pd.Series(self.spread_history_full).shift(lag)).dropna().var()) for lag in lags]
+        
             # Use a linear fit to estimate the Hurst Exponent
-            poly = np.polyfit(np.log(lags), np.log(tau), 1)
-            self.hurst_exponent = poly[0] * 2
+            #poly = np.polyfit(np.log(lags), np.log(tau), 1)
+            #self.hurst_exponent = poly[0] * 2
+        
+            #self.hurst_history_1.append(self.hurst_exponent)
+
+            self.hurst_exponent, c, data_hist = compute_Hc(self.spread_history, kind='change', simplified=False)
+
+            hurst_hist, c, data_hist = compute_Hc(self.spread_history_full, kind='change', simplified=False)
+            self.hurst_history_2.append(hurst_hist)
 
 
     def start(self):
@@ -79,33 +92,36 @@ class PairsTrading(bt.Strategy):
 
 
     def next(self):
-
+        #print('next')
+        # the trade_size part is not correct
         self.equity = self.broker.get_value()
         self.trade_size = self.equity * self.params.size / self.data_a[0]
         self.calc_hedge_ratio()
 
         # Check if there is already an open trade
         if self.getposition().size == 0:
-            if (self.zscore < self.lower_bound) and (len(self.spread_history) >= self.params.window) and (adfuller(self.spread_history)[1] <= 0.1):
+            #print('zscore: ', self.zscore, '<' , self.lower_bound)
+            if (self.zscore < self.lower_bound) and (0 < self.hurst_exponent < 1):
                 # Buy the spread
                 self.log("BUY SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0]))
                 self.log("Z-SCORE: {}".format(self.zscore))
                 self.log("Portfolio Value: {}".format(self.equity))
                 self.log("Hurst: {}".format(self.hurst_exponent))
+                #self.log("Hurst 2: {}".format(self.hurst_exponent_2))
                 self.log("ADF P-Value: {}".format(adfuller(self.spread_history)[1]))
                 self.order_target_size(self.datas[0], self.trade_size)
                 self.order_target_size(self.datas[1], -self.hedge_ratio * self.trade_size)
 
-            elif (self.zscore > self.upper_bound) and (len(self.spread_history) >= self.params.window) and (adfuller(self.spread_history)[1] <= 0.1):
+            elif (self.zscore > self.upper_bound) and (0 < self.hurst_exponent < 1):
                 # Sell the spread
                 self.log("SELL SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0]))
                 self.log("Z-SCORE: {}".format(self.zscore))
                 self.log("Portfolio Value: {}".format(self.equity))
                 self.log("Hurst: {}".format(self.hurst_exponent))
+                #self.log("Hurst 2: {}".format(self.hurst_exponent_2))
                 self.log("ADF P-Value: {}".format(adfuller(self.spread_history)[1]))
                 self.order_target_size(self.datas[0], -self.trade_size)
                 self.order_target_size(self.datas[1], self.hedge_ratio * self.trade_size)
-
 
         # If there is an open trade, wait until the zscore crosses zero
         elif self.getposition().size > 0 and self.zscore > 0:
