@@ -213,3 +213,17 @@ buy_order = client.create_order(symbol=symbol, side = 'BUY', type = 'MARKET', qu
 sell_order = client.create_order(symbol=symbol, side = 'SELL', type = 'MARKET', quantity=quantity)
 
 #%%
+import datetime
+
+symbol = 'BTCBUSD'
+
+days = 50
+end_time = datetime.datetime.now()
+start_time = end_time - datetime.timedelta(days=days)
+
+klines = client.get_historical_klines(symbol, client.KLINE_INTERVAL_1HOUR, start_time.strftime("%d %b %Y %H:%M:%S"), end_time.strftime("%d %b %Y %H:%M:%S"))
+df = pd.DataFrame(klines, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ignore'])
+
+
+
+#%%
