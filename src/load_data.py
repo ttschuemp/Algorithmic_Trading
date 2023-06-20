@@ -34,7 +34,7 @@ def fetch_crypto_data(top_n, days, client):
 
     ticker_pairs = [f"{ticker.upper()}" for ticker in ticker_pairs]
 
-    stable_coins = ['USDTUSDT', 'USDCUSDT', 'BUSDUSDT', 'DAIUSDT']
+    stable_coins = ['USDTUSDT', 'USDCUSDT', 'BUSDUSDT', 'DAIUSDT', 'TUSDUSDT', 'USDPUSDT']
 
     # Define the start and end time for the historical data
     end_time = datetime.datetime.now()
