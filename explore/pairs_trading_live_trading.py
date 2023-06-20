@@ -191,3 +191,25 @@ if __name__ == "__main__":
     # Print the final portfolio value
     final_value = cerebro.broker.getvalue()
     print("Final portfolio value: ${}".format(final_value))
+
+#%%
+from binance import Client
+#from src.api_key_secret import api_key_testnet, api_secret_testnet, path_zert
+
+api_key_testnet = '6FVEREC1YOenBUKfisdPXaJHNn8kM3lzxWCgFRDUvyY9fKM2H17pZz6wNg2Spf71'
+
+api_secret_testnet = '0wlHotYWjFIvpZc69FnESbfRhaDUMtcidNJX72obsocGRlH9Feg90rVkT7YCKUqg'
+
+client = Client(api_key_testnet, api_secret_testnet, testnet=True)
+client.API_URL = 'https://testnet.binance.vision/api'
+
+account_info = client.get_account()
+
+symbol = 'BTCBUSD'
+quantity = 0.01
+
+buy_order = client.create_order(symbol=symbol, side = 'BUY', type = 'MARKET', quantity=quantity)
+
+sell_order = client.create_order(symbol=symbol, side = 'SELL', type = 'MARKET', quantity=quantity)
+
+#%%
