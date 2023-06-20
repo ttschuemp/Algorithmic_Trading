@@ -30,11 +30,11 @@ def fetch_crypto_data(top_n, days, client):
     top_cryptos = response.json()
 
     # Construct a list of ticker pairs for the top cryptocurrencies against USDT
-    ticker_pairs = [crypto["symbol"].lower() + "usdt" for crypto in top_cryptos]
+    ticker_pairs = [crypto["symbol"].lower() + "busd" for crypto in top_cryptos]
 
     ticker_pairs = [f"{ticker.upper()}" for ticker in ticker_pairs]
 
-    stable_coins = ['USDTUSDT', 'USDCUSDT', 'BUSDUSDT', 'DAIUSDT', 'TUSDUSDT', 'USDPUSDT']
+    stable_coins = ['USDTBUSD', 'USDCBUSD', 'USDTBUSD', 'DAIBUSD', 'TUSDBUSD', 'USDPBUSD']
 
     # Define the start and end time for the historical data
     end_time = datetime.datetime.now()
