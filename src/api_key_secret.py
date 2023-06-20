@@ -12,4 +12,5 @@ path_zert = "C:\DevLab\Zscaler Zertifikat.cer"
 
 
 
+
 #%%
