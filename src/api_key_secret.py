@@ -1,6 +1,6 @@
 api_key_testnet = '6FVEREC1YOenBUKfisdPXaJHNn8kM3lzxWCgFRDUvyY9fKM2H17pZz6wNg2Spf71'
 
-api_secret2_testnet = '0wlHotYWjFIvpZc69FnESbfRhaDUMtcidNJX72obsocGRlH9Feg90rVkT7YCKUqg'
+api_secret_testnet = '0wlHotYWjFIvpZc69FnESbfRhaDUMtcidNJX72obsocGRlH9Feg90rVkT7YCKUqg'
 
 
 api_key = "NNX477aXFRKbXbOCH6gJiB6nR0h2CbRllDHz92OiAz5t1492i2XGwcmZsJHkzNO4"
