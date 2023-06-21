@@ -101,8 +101,8 @@ class PairsTrading(bt.Strategy):
                 #self.log("Hurst 2: {}".format(self.hurst_exponent_2))
                 self.log("ADF P-Value: {}".format(adfuller(self.spread_history)[1]))
 
-                client.create_order(symbol='BTCBUSD', side = 'BUY', type = 'MARKET', quantity=self.trade_size)
-                client.create_order(symbol='ETHBUSD', side = 'SELL', type = 'MARKET', quantity=self.hedge_ratio * self.trade_size)
+                client.create_order(symbol='BTCBUSD', side = 'BUY', type = 'MARKET', quantity = self.trade_size)
+                client.create_order(symbol='ETHBUSD', side = 'SELL', type = 'MARKET', quantity = self.hedge_ratio * self.trade_size )
 
             #elif (self.zscore > self.upper_bound) and (0 < self.hurst_exponent < 1):
             elif (self.zscore > self.upper_bound):
@@ -114,8 +114,8 @@ class PairsTrading(bt.Strategy):
                 #self.log("Hurst 2: {}".format(self.hurst_exponent_2))
                 self.log("ADF P-Value: {}".format(adfuller(self.spread_history)[1]))
 
-                client.create_order(symbol='BTCBUSD', side = 'SELL', type = 'MARKET', quantity=self.trade_size)
-                client.create_order(symbol='ETHBUSD', side = 'SELL', type = 'MARKET', quantity=self.hedge_ratio * self.trade_size)
+                client.create_order(symbol='BTCBUSD', side = 'SELL', type = 'MARKET', quantity = self.trade_size)
+                client.create_order(symbol='ETHBUSD', side = 'SELL', type = 'MARKET', quantity = self.hedge_ratio * self.trade_size)
 
 
         # If there is an open trade, wait until the zscore crosses zero
@@ -124,16 +124,16 @@ class PairsTrading(bt.Strategy):
             self.log("Z-SCORE: {}".format(self.zscore))
             self.log("Portfolio Value: {}".format(self.equity))
 
-            client.create_order(symbol='BTCBUSD', side = 'SELL', type = 'MARKET', quantity=self.trade_size)
-            client.create_order(symbol='ETHBUSD', side = 'SELL', type = 'MARKET', quantity=self.trade_size)
+            client.create_order(symbol='BTCBUSD', side = 'SELL', type = 'MARKET', quantity = self.trade_size)
+            client.create_order(symbol='ETHBUSD', side = 'SELL', type = 'MARKET', quantity = self.hedge_ratio * self.trade_size)
 
 
         elif self.getposition().size < 0 and self.zscore < 0:
             self.log("CLOSE SHORT SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0]))
             self.log("Z-SCORE: {}".format(self.zscore))
             self.log("Portfolio Value: {}".format(self.equity))
-            client.create_order(symbol='BTCBUSD', side = 'SELL', type = 'MARKET', quantity=self.trade_size)
-            client.create_order(symbol='ETHBUSD', side = 'SELL', type = 'MARKET', quantity=self.trade_size)
+            client.create_order(symbol='BTCBUSD', side = 'SELL', type = 'MARKET', quantity = self.trade_size)
+            client.create_order(symbol='ETHBUSD', side = 'SELL', type = 'MARKET', quantity = self.hedge_ratio * self.trade_size)
 
 
 #%%
@@ -203,7 +203,7 @@ trade_size = float(account_info['balances'][0]['free']) * 0.02
 symbol = 'BTCBUSD'
 quantity = 0.01
 
-buy_order = client.create_order(symbol=tickers_pairs[0], side = 'BUY', type = 'MARKET', quantity=trade_size)
+buy_order = client.create_order(symbol=tickers_pairs[0], side = 'BUY', type = 'MARKET', quantity=round(trade_size / 30000, 6))
 
 sell_order = client.create_order(symbol=symbol, side = 'SELL', type = 'MARKET', quantity=quantity)
 
@@ -222,6 +222,10 @@ df = pd.DataFrame(klines, columns=['timestamp', 'open', 'high', 'low', 'close', 
 
 
 #%%
-client.create_order(symbol='BTCBUSD', side = 'BUY', type = 'MARKET', quantity=str(trade_size))
-client.create_order(symbol='ETHBUSD', side = 'SELL', type = 'MARKET', quantity=trade_size)
+client.create_order(symbol='BTCBUSD', side = 'BUY', type = 'MARKET', quantity=round(trade_size / 30000, 6))
+client.create_order(symbol='ETHBUSD', side = 'SELL', type = 'MARKET', quantity=round(trade_size / 30000, 6))
+
+# buy dollar amount
+client.create_order(symbol='ETHBUSD', side = 'BUY', type = 'MARKET', quoteOrderQty=15)
+client.create_order(symbol='ETHBUSD', side = 'BUY', type = 'MARKET', quoteOrderQty=(hedge_ratio * trade_size))
 #%%
