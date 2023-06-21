@@ -70,23 +70,13 @@ class PairsTrading(bt.Strategy):
         self.hedge_ratio_history.append(hedge_ratio)
 
         # calc hurst exponent
-        if len(self.spread_history) >= self.params.window:
+        #if len(self.spread_history) >= self.params.window:
 
-            #lags = range(2, len(self.spread_history) // 2)
 
-            # Calculate the array of the variances of the lagged differences
-            #tau = [np.sqrt(np.abs((self.spread_history_full) - pd.Series(self.spread_history_full).shift(lag)).dropna().var()) for lag in lags]
+         #  self.hurst_exponent, c, data_hist = compute_Hc(self.spread_history, kind='change', simplified=False)
 
-            # Use a linear fit to estimate the Hurst Exponent
-            #poly = np.polyfit(np.log(lags), np.log(tau), 1)
-            #self.hurst_exponent = poly[0] * 2
-
-            #self.hurst_history_1.append(self.hurst_exponent)
-
-            self.hurst_exponent, c, data_hist = compute_Hc(self.spread_history, kind='change', simplified=False)
-
-            hurst_hist, c, data_hist = compute_Hc(self.spread_history_full, kind='change', simplified=False)
-            self.hurst_history_2.append(hurst_hist)
+         #  hurst_hist, c, data_hist = compute_Hc(self.spread_history_full, kind='change', simplified=False)
+         #   self.hurst_history_2.append(hurst_hist)
 
 
     def start(self):
@@ -96,34 +86,36 @@ class PairsTrading(bt.Strategy):
     def next(self):
         # the trade_size part is not correct
         self.equity = self.broker.get_value()
-        self.trade_size = self.equity * self.params.size / self.data_a[0]
+        self.trade_size = float(account_info['balances'][0]['free']) * self.params.size
         self.calc_hedge_ratio()
 
         # Check if there is already an open trade
         if self.getposition().size == 0:
-            if (self.zscore < self.lower_bound) and (0 < self.hurst_exponent < 1):
+            # if (self.zscore < self.lower_bound) and (0 < self.hurst_exponent < 1):
+            if (self.zscore < self.lower_bound):
                 # Buy the spread
                 self.log("BUY SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0]))
                 self.log("Z-SCORE: {}".format(self.zscore))
                 self.log("Portfolio Value: {}".format(self.equity))
-                self.log("Hurst: {}".format(self.hurst_exponent))
+                #self.log("Hurst: {}".format(self.hurst_exponent))
                 #self.log("Hurst 2: {}".format(self.hurst_exponent_2))
                 self.log("ADF P-Value: {}".format(adfuller(self.spread_history)[1]))
 
-                client.create_order(symbol=self.datas[0], side = 'BUY', type = 'MARKET', quantity=self.trade_size)
-                client.create_order(symbol=self.datas[1], side = 'SELL', type = 'MARKET', quantity=self.hedge_ratio * self.trade_size)
+                client.create_order(symbol='BTCBUSD', side = 'BUY', type = 'MARKET', quantity=self.trade_size)
+                client.create_order(symbol='ETHBUSD', side = 'SELL', type = 'MARKET', quantity=self.hedge_ratio * self.trade_size)
 
-            elif (self.zscore > self.upper_bound) and (0 < self.hurst_exponent < 1):
+            #elif (self.zscore > self.upper_bound) and (0 < self.hurst_exponent < 1):
+            elif (self.zscore > self.upper_bound):
                 # Sell the spread
                 self.log("SELL SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0]))
                 self.log("Z-SCORE: {}".format(self.zscore))
                 self.log("Portfolio Value: {}".format(self.equity))
-                self.log("Hurst: {}".format(self.hurst_exponent))
+                #self.log("Hurst: {}".format(self.hurst_exponent))
                 #self.log("Hurst 2: {}".format(self.hurst_exponent_2))
                 self.log("ADF P-Value: {}".format(adfuller(self.spread_history)[1]))
 
-                client.create_order(symbol=self.datas[0], side = 'SELL', type = 'MARKET', quantity=self.trade_size)
-                client.create_order(symbol=self.datas[1], side = 'SELL', type = 'MARKET', quantity=self.trade_size)
+                client.create_order(symbol='BTCBUSD', side = 'SELL', type = 'MARKET', quantity=self.trade_size)
+                client.create_order(symbol='ETHBUSD', side = 'SELL', type = 'MARKET', quantity=self.hedge_ratio * self.trade_size)
 
 
         # If there is an open trade, wait until the zscore crosses zero
@@ -132,21 +124,21 @@ class PairsTrading(bt.Strategy):
             self.log("Z-SCORE: {}".format(self.zscore))
             self.log("Portfolio Value: {}".format(self.equity))
 
-            client.create_order(symbol=self.datas[0], side = 'SELL', type = 'MARKET', quantity=self.trade_size)
-            client.create_order(symbol=self.datas[1], side = 'SELL', type = 'MARKET', quantity=self.trade_size)
+            client.create_order(symbol='BTCBUSD', side = 'SELL', type = 'MARKET', quantity=self.trade_size)
+            client.create_order(symbol='ETHBUSD', side = 'SELL', type = 'MARKET', quantity=self.trade_size)
 
 
         elif self.getposition().size < 0 and self.zscore < 0:
             self.log("CLOSE SHORT SPREAD: A {} B {}".format(self.data_a[0], self.data_b[0]))
             self.log("Z-SCORE: {}".format(self.zscore))
             self.log("Portfolio Value: {}".format(self.equity))
-            client.create_order(symbol=self.datas[0], side = 'SELL', type = 'MARKET', quantity=self.trade_size)
-            client.create_order(symbol=self.datas[1], side = 'SELL', type = 'MARKET', quantity=self.trade_size)
+            client.create_order(symbol='BTCBUSD', side = 'SELL', type = 'MARKET', quantity=self.trade_size)
+            client.create_order(symbol='ETHBUSD', side = 'SELL', type = 'MARKET', quantity=self.trade_size)
 
 
 #%%
 if __name__ == "__main__":
-    days = 90
+    days = 13
     cerebro = bt.Cerebro()
 
     # Fetch data and find cointegrated pairs
@@ -156,12 +148,13 @@ if __name__ == "__main__":
     pairs = find_cointegrated_pairs_hurst(data)
 
     window = int(pairs['Half Life'][0])
-    #window = 150
+    window = 150
     std_dev = 1
     size = 0.02
 
     # Choose the pair with the smallest p-value
     tickers_pairs = pairs.iloc[0, 0:2]
+    #tickers_pairs = ['BTCBUSD', 'ETHBUSD']
     print(f'trading pair: ' + str(tickers_pairs))
 
     # Fetch data for the chosen pair
@@ -204,11 +197,13 @@ client = Client(api_key_testnet, api_secret_testnet, testnet=True)
 client.API_URL = 'https://testnet.binance.vision/api'
 
 account_info = client.get_account()
+trade_size = float(account_info['balances'][0]['free']) * 0.02
+
 
 symbol = 'BTCBUSD'
 quantity = 0.01
 
-buy_order = client.create_order(symbol=symbol, side = 'BUY', type = 'MARKET', quantity=quantity)
+buy_order = client.create_order(symbol=tickers_pairs[0], side = 'BUY', type = 'MARKET', quantity=trade_size)
 
 sell_order = client.create_order(symbol=symbol, side = 'SELL', type = 'MARKET', quantity=quantity)
 
@@ -226,4 +221,7 @@ df = pd.DataFrame(klines, columns=['timestamp', 'open', 'high', 'low', 'close', 
 
 
 
+#%%
+client.create_order(symbol='BTCBUSD', side = 'BUY', type = 'MARKET', quantity=str(trade_size))
+client.create_order(symbol='ETHBUSD', side = 'SELL', type = 'MARKET', quantity=trade_size)
 #%%
