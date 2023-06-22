@@ -2,6 +2,5 @@
 
 
 ### To Do 
-- Backtesting with backtrader package (tschuemp)
-- Strategie (Poggi)
-- Push to github (Poggi)
+- Set Binance as the default broker in Backtrader and see if orders execution works (Poggi)
+- Live data from Binance with Websocket (tts)
