@@ -466,7 +466,8 @@ def find_cointegrated_pairs_johansen(data):
 
                     hurst_2, c, data_2 = compute_Hc(spread, kind='change', simplified=True)
 
-                    pairs.append((keys[i], keys[j], keys[k], sum_of_traces, half_life.values, hurst_exp, hurst_2))
+                    if hurst_exp < 0.5 and hurst_2 < 0.5:
+                        pairs.append((keys[i], keys[j], keys[k], sum_of_traces, half_life.values, hurst_exp, hurst_2))
 
     # Sort cointegrated pairs by p-value in ascending order
     pairs.sort(key=lambda x: x[3], reverse=True)
