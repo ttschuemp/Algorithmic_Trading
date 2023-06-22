@@ -94,6 +94,9 @@ def find_cointegrated_pairs_hurst(data):
                 if hurst_2 < 0.5:
                     pairs.append((keys[i], keys[j], pvalue, half_life.values, hurst_exp, hurst_2))
 
+    if not pairs:
+        raise ValueError("No cointegrated pairs found")
+
 
     # Sort cointegrated pairs by p-value in ascending order
     pairs.sort(key=lambda x: x[2])
