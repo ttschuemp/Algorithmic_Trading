@@ -86,7 +86,8 @@ class PairsTrading(bt.Strategy):
     def next(self):
         # the trade_size part is not correct
         self.equity = self.broker.get_value()
-        self.trade_size = float(account_info['balances'][0]['free']) * self.params.size
+        #self.trade_size = float(client.get_account()['balances'][0]['free']) * self.params.size
+        self.trade_size = 0.001
         self.calc_hedge_ratio()
 
         # Check if there is already an open trade
@@ -142,9 +143,9 @@ if __name__ == "__main__":
     cerebro = bt.Cerebro()
 
     # Fetch data and find cointegrated pairs
-    client = Client(api_key_testnet, api_secret_testnet, testnet=True)
+    client = Client(api_key_testnet, api_secret_testnet, testnet=True, requests_params={"verify": "C:\DevLab\Zscaler Zertifikat.cer"})
     client.API_URL = 'https://testnet.binance.vision/api'
-    data = fetch_crypto_data(50, days, client)
+    data = fetch_crypto_data(10, days, client)
     pairs = find_cointegrated_pairs_hurst(data)
 
     window = int(pairs['Half Life'][0])
@@ -193,11 +194,13 @@ api_key_testnet = '6FVEREC1YOenBUKfisdPXaJHNn8kM3lzxWCgFRDUvyY9fKM2H17pZz6wNg2Sp
 
 api_secret_testnet = '0wlHotYWjFIvpZc69FnESbfRhaDUMtcidNJX72obsocGRlH9Feg90rVkT7YCKUqg'
 
-client = Client(api_key_testnet, api_secret_testnet, testnet=True)
+client = Client(api_key_testnet, api_secret_testnet, testnet=True, requests_params={"verify": "C:\DevLab\Zscaler Zertifikat.cer"})
+
+
 client.API_URL = 'https://testnet.binance.vision/api'
 
 account_info = client.get_account()
-trade_size = float(account_info['balances'][0]['free']) * 0.02
+trade_size = float(client.get_account()['balances'][0]['free']) * 0.02
 
 
 symbol = 'BTCBUSD'
@@ -228,4 +231,10 @@ client.create_order(symbol='ETHBUSD', side = 'SELL', type = 'MARKET', quantity=r
 # buy dollar amount
 client.create_order(symbol='ETHBUSD', side = 'BUY', type = 'MARKET', quoteOrderQty=15)
 client.create_order(symbol='ETHBUSD', side = 'BUY', type = 'MARKET', quoteOrderQty=(hedge_ratio * trade_size))
+#%%
+# margin
+order = client.create_margin_order(symbol='BTCBUSD', side = 'SELL', type = 'MARKET', quantity=0.0003)
+
+
+
 #%%
