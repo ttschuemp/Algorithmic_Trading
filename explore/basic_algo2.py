@@ -15,15 +15,17 @@ import talib
 import ta
 
 from binance import Client, AsyncClient, ThreadedWebsocketManager, ThreadedDepthCacheManager
-from api_key_secret import api_key, api_secret
+from api_key_secret import*
 import time
 from binance import ThreadedWebsocketManager
 
 #https://medium.com/geekculture/building-a-basic-crypto-trading-bot-in-python-4f272693c375
 #STEP 1: fetch data
 
-client = Client(api_key,api_secret)
+client = Client(api_key_testnet, api_secret_testnet, testnet=True)
 client.API_URL = 'https://testnet.binance.vision/api'
+
+account_info = client.get_account()
 
 # STEP 1: FETCH THE DATA
 def fetch_data(ticker, interval, lookback):
@@ -121,9 +123,7 @@ while True:
     strategy('BNBUSDT',1)
     time.sleep(0.5)
 
-        
-        
 
 
 
-
+#%%
