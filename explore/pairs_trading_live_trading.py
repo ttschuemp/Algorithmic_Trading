@@ -157,6 +157,16 @@ if __name__ == "__main__":
     #tickers_pairs = ['BTCBUSD', 'ETHBUSD']
     print(f'trading pair: ' + str(tickers_pairs))
 
+    index = original_string.index("BUSD")  # Find the index of "BUSD"
+    modified_string = original_string[:index] + '/' + original_string[index:]
+
+    my_exchange = 'Binance' # example of crypto exchange
+    method_to_call = getattr(ccxt,my_exchange.lower()) # retrieving the method #from ccxt whose name matches the given exchange name
+    exchange_obj = method_to_call() # defining an exchange object
+
+
+
+
     # Fetch data for the chosen pair
     data_df0 = fetch_data(tickers_pairs[0], '1h', str(days * 24), client)
     data_df1 = fetch_data(tickers_pairs[1], '1h', str(days * 24), client)
@@ -218,6 +228,15 @@ start_time = end_time - datetime.timedelta(days=days)
 
 klines = client.get_historical_klines(symbol, client.KLINE_INTERVAL_1HOUR, start_time.strftime("%d %b %Y %H:%M:%S"), end_time.strftime("%d %b %Y %H:%M:%S"))
 df = pd.DataFrame(klines, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ignore'])
+df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+
+#%%
+client2 = Client(api_key_testnet, api_secret_testnet)
+klines2 = client2.get_historical_klines(symbol, client.KLINE_INTERVAL_1HOUR, start_time.strftime("%d %b %Y %H:%M:%S"), end_time.strftime("%d %b %Y %H:%M:%S"))
+df2 = pd.DataFrame(klines2, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ignore'])
+df2['timestamp'] = pd.to_datetime(df2['timestamp'], unit='ms')
+
+
 
 
 
@@ -228,4 +247,25 @@ client.create_order(symbol='ETHBUSD', side = 'SELL', type = 'MARKET', quantity=r
 # buy dollar amount
 client.create_order(symbol='ETHBUSD', side = 'BUY', type = 'MARKET', quoteOrderQty=15)
 client.create_order(symbol='ETHBUSD', side = 'BUY', type = 'MARKET', quoteOrderQty=(hedge_ratio * trade_size))
+#%%
+# ccxt
+import ccxt
+
+my_exchange = 'Binance' # example of crypto exchange
+method_to_call = getattr(ccxt,my_exchange.lower()) # retrieving the method #from ccxt whose name matches the given exchange name
+exchange_obj = method_to_call() # defining an exchange object
+
+ticker = 'BTC/BUSD'
+pair_price_data = exchange_obj.fetch_ticker(ticker)
+closing_price = pair_price_data['close']
+
+#%%
+
+def symbol_string_conversion(tickers_pairs, stable_coin):
+    index = tickers_pairs.index(stable_coin)  # Find the index of "BUSD"
+    symbol = tickers_pairs[:index] + '/' + tickers_pairs[index:]
+    return symbol
+
+
+test = symbol_string_conversion(tickers_pairs[1], 'BUSD')
 #%%

@@ -67,6 +67,11 @@ def fetch_crypto_data(top_n, days, client):
 
     return pd.concat(df_list, axis=1)
 
+def symbol_string_conversion(tickers_pairs, stable_coin):
+    index = tickers_pairs.index(stable_coin)  # Find the index of "BUSD"
+    symbol = tickers_pairs[:index] + '/' + tickers_pairs[index:]
+    return symbol
+
 
 
 
