@@ -157,13 +157,15 @@ if __name__ == "__main__":
     #tickers_pairs = ['BTCBUSD', 'ETHBUSD']
     print(f'trading pair: ' + str(tickers_pairs))
 
-    index = original_string.index("BUSD")  # Find the index of "BUSD"
-    modified_string = original_string[:index] + '/' + original_string[index:]
+    pair_1 = symbol_string_conversion(tickers_pairs[0], 'BUSD')
+    pair_2 = symbol_string_conversion(tickers_pairs[1], 'BUSD')
 
     my_exchange = 'Binance' # example of crypto exchange
     method_to_call = getattr(ccxt,my_exchange.lower()) # retrieving the method #from ccxt whose name matches the given exchange name
     exchange_obj = method_to_call() # defining an exchange object
 
+    pair1_price_data = exchange_obj.fetch_ticker(pair_1)
+    closing_price = pair_price_data['close']
 
 
 
@@ -257,9 +259,19 @@ exchange_obj = method_to_call() # defining an exchange object
 
 ticker = 'BTC/BUSD'
 pair_price_data = exchange_obj.fetch_ticker(ticker)
-closing_price = pair_price_data['close']
+data1 = pd.DataFrame(pair_price_data)
+data1['timestamp'] = pd.to_datetime(data1['timestamp'], unit='ms')
+data1.set_index('timestamp', inplace=True)
+
 
 #%%
+from datetime import datetime, timedelta
+import time
+
+
+day = 15
+hours = days * 24
+
 
 def symbol_string_conversion(tickers_pairs, stable_coin):
     index = tickers_pairs.index(stable_coin)  # Find the index of "BUSD"
@@ -267,5 +279,13 @@ def symbol_string_conversion(tickers_pairs, stable_coin):
     return symbol
 
 
-test = symbol_string_conversion(tickers_pairs[1], 'BUSD')
+symbol = symbol_string_conversion(tickers_pairs[1], 'BUSD')
+exchange = 'binance'
+
+hist_start_date = datetime.utcnow() - timedelta(hours=hours)
+data = bt.feeds.CCXT(exchange=exchange,
+                     symbol=symbol,
+                     timeframe=bt.TimeFrame.Hours,
+                     fromdate=hist_start_date,
+                     ohlcv_limit=444)
 #%%
