@@ -86,8 +86,7 @@ class PairsTrading(bt.Strategy):
     def next(self):
         # the trade_size part is not correct
         self.equity = self.broker.get_value()
-        #self.trade_size = float(client.get_account()['balances'][0]['free']) * self.params.size
-        self.trade_size = 0.001
+        self.trade_size = float(account_info['balances'][0]['free']) * self.params.size
         self.calc_hedge_ratio()
 
         # Check if there is already an open trade
@@ -143,9 +142,9 @@ if __name__ == "__main__":
     cerebro = bt.Cerebro()
 
     # Fetch data and find cointegrated pairs
-    client = Client(api_key_testnet, api_secret_testnet, testnet=True, requests_params={"verify": "C:\DevLab\Zscaler Zertifikat.cer"})
+    client = Client(api_key_testnet, api_secret_testnet, testnet=True)
     client.API_URL = 'https://testnet.binance.vision/api'
-    data = fetch_crypto_data(10, days, client)
+    data = fetch_crypto_data(50, days, client)
     pairs = find_cointegrated_pairs_hurst(data)
 
     window = int(pairs['Half Life'][0])
@@ -157,6 +156,18 @@ if __name__ == "__main__":
     tickers_pairs = pairs.iloc[0, 0:2]
     #tickers_pairs = ['BTCBUSD', 'ETHBUSD']
     print(f'trading pair: ' + str(tickers_pairs))
+
+    pair_1 = symbol_string_conversion(tickers_pairs[0], 'BUSD')
+    pair_2 = symbol_string_conversion(tickers_pairs[1], 'BUSD')
+
+    my_exchange = 'Binance' # example of crypto exchange
+    method_to_call = getattr(ccxt,my_exchange.lower()) # retrieving the method #from ccxt whose name matches the given exchange name
+    exchange_obj = method_to_call() # defining an exchange object
+
+    pair1_price_data = exchange_obj.fetch_ticker(pair_1)
+    closing_price = pair_price_data['close']
+
+
 
     # Fetch data for the chosen pair
     data_df0 = fetch_data(tickers_pairs[0], '1h', str(days * 24), client)
@@ -194,13 +205,11 @@ api_key_testnet = '6FVEREC1YOenBUKfisdPXaJHNn8kM3lzxWCgFRDUvyY9fKM2H17pZz6wNg2Sp
 
 api_secret_testnet = '0wlHotYWjFIvpZc69FnESbfRhaDUMtcidNJX72obsocGRlH9Feg90rVkT7YCKUqg'
 
-client = Client(api_key_testnet, api_secret_testnet, testnet=True, requests_params={"verify": "C:\DevLab\Zscaler Zertifikat.cer"})
-
-
+client = Client(api_key_testnet, api_secret_testnet, testnet=True)
 client.API_URL = 'https://testnet.binance.vision/api'
 
 account_info = client.get_account()
-trade_size = float(client.get_account()['balances'][0]['free']) * 0.02
+trade_size = float(account_info['balances'][0]['free']) * 0.02
 
 
 symbol = 'BTCBUSD'
@@ -221,6 +230,15 @@ start_time = end_time - datetime.timedelta(days=days)
 
 klines = client.get_historical_klines(symbol, client.KLINE_INTERVAL_1HOUR, start_time.strftime("%d %b %Y %H:%M:%S"), end_time.strftime("%d %b %Y %H:%M:%S"))
 df = pd.DataFrame(klines, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ignore'])
+df['timestamp'] = pd.to_datetime(df['timestamp'], unit='ms')
+
+#%%
+client2 = Client(api_key_testnet, api_secret_testnet)
+klines2 = client2.get_historical_klines(symbol, client.KLINE_INTERVAL_1HOUR, start_time.strftime("%d %b %Y %H:%M:%S"), end_time.strftime("%d %b %Y %H:%M:%S"))
+df2 = pd.DataFrame(klines2, columns=['timestamp', 'open', 'high', 'low', 'close', 'volume', 'close_time', 'quote_asset_volume', 'number_of_trades', 'taker_buy_base_asset_volume', 'taker_buy_quote_asset_volume', 'ignore'])
+df2['timestamp'] = pd.to_datetime(df2['timestamp'], unit='ms')
+
+
 
 
 
@@ -232,9 +250,42 @@ client.create_order(symbol='ETHBUSD', side = 'SELL', type = 'MARKET', quantity=r
 client.create_order(symbol='ETHBUSD', side = 'BUY', type = 'MARKET', quoteOrderQty=15)
 client.create_order(symbol='ETHBUSD', side = 'BUY', type = 'MARKET', quoteOrderQty=(hedge_ratio * trade_size))
 #%%
-# margin
-order = client.create_margin_order(symbol='BTCBUSD', side = 'SELL', type = 'MARKET', quantity=0.0003)
+# ccxt
+import ccxt
+
+my_exchange = 'Binance' # example of crypto exchange
+method_to_call = getattr(ccxt,my_exchange.lower()) # retrieving the method #from ccxt whose name matches the given exchange name
+exchange_obj = method_to_call() # defining an exchange object
+
+ticker = 'BTC/BUSD'
+pair_price_data = exchange_obj.fetch_ticker(ticker)
+data1 = pd.DataFrame(pair_price_data)
+data1['timestamp'] = pd.to_datetime(data1['timestamp'], unit='ms')
+data1.set_index('timestamp', inplace=True)
 
 
+#%%
+from datetime import datetime, timedelta
+import time
 
+
+day = 15
+hours = days * 24
+
+
+def symbol_string_conversion(tickers_pairs, stable_coin):
+    index = tickers_pairs.index(stable_coin)  # Find the index of "BUSD"
+    symbol = tickers_pairs[:index] + '/' + tickers_pairs[index:]
+    return symbol
+
+
+symbol = symbol_string_conversion(tickers_pairs[1], 'BUSD')
+exchange = 'binance'
+
+hist_start_date = datetime.utcnow() - timedelta(hours=hours)
+data = bt.feeds.CCXT(exchange=exchange,
+                     symbol=symbol,
+                     timeframe=bt.TimeFrame.Hours,
+                     fromdate=hist_start_date,
+                     ohlcv_limit=444)
 #%%
