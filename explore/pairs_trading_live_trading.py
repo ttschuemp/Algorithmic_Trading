@@ -205,7 +205,7 @@ api_key_testnet = '6FVEREC1YOenBUKfisdPXaJHNn8kM3lzxWCgFRDUvyY9fKM2H17pZz6wNg2Sp
 
 api_secret_testnet = '0wlHotYWjFIvpZc69FnESbfRhaDUMtcidNJX72obsocGRlH9Feg90rVkT7YCKUqg'
 
-client = Client(api_key_testnet, api_secret_testnet, testnet=True)
+client = Client(api_key_testnet, api_secret_testnet, testnet=True, verfiy: )
 client.API_URL = 'https://testnet.binance.vision/api'
 
 account_info = client.get_account()

@@ -16,7 +16,7 @@ if __name__ == "__main__":
     cerebro = bt.Cerebro()
 
     # Fetch data and find cointegrated pairs
-    client = Client(api_key, api_secret)
+    client = Client(api_key, api_secret, requests_params={"verify": "C:\DevLab\Zscaler Zertifikat.cer"})
     data = fetch_crypto_data(20, days, client)
     pairs = find_cointegrated_pairs_hurst(data)
 
@@ -109,3 +109,5 @@ if __name__ == "__main__":
 
     quantstats.reports.html(returns, output='stats.html', title='Backtrade Pairs')
 
+
+#%%
