@@ -99,15 +99,19 @@ df.fillna("No Card", inplace=True)
 df_combined = df[['Name', 'Address', "BP Nr", "Personen-Nr", "Konto-Nr", "Kartennummer"]] \
     .astype(str).apply(lambda x: " ".join(x), axis=1)
 
-df_combined = df_combined.append(chatgtp_prompts)
-df_combined = df_combined.sample(frac = 1)
+df_combined = df_combined.append(chatgtp_prompts).to_frame()
+
+df_combined["isClient"] = df["isClient"].append(chatgtp_prompts_df['isClient'])
+
+
+df_combined = df_combined.sample(frac = 1).reset_index(drop=True)
 
 # Apply random_split function to each row of the 'Text' column
 #df_combined = df_combined.apply(lambda x: pd.Series(random_split(x))).astype(str).apply(lambda x: " ".join(x), axis=1)
 
 # Separate the features (text data) and the target variable
-X = df_combined.values
-y = (df["isClient"].append(chatgtp_prompts_df['isClient'])).values
+X = df_combined.iloc[:,0].values
+y = df_combined.iloc[:,1].values
 
 # Split the data into training and testing sets
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -129,4 +133,18 @@ accuracy = accuracy_score(y_test, y_pred)
 print(f"Accuracy: {accuracy}")
 
 
+#%%
+# Get user input
+user_input = input("Enter the text to classify: ")
+
+# Preprocess user input
+user_input_combined = " ".join(user_input)
+user_input_vector = vectorizer.transform([user_input_combined])
+
+# Classify user input
+prediction = model.predict(user_input_vector)
+if prediction[0] == 1:
+    print("The text contains client information.")
+else:
+    print("The text does not contain client information.")
 #%%
