@@ -24,6 +24,7 @@ from sklearn.metrics import accuracy_score
 # https://ai.google.com/research/NaturalQuestions
 
 # https://www.kaggle.com/datasets/rtatman/questionanswer-dataset/code
+# https://www.kaggle.com/code/leomauro/nlp-document-retrieval-for-question-answering
 
 # chatgtp prompts
 # Read CSV file
@@ -35,6 +36,7 @@ with open("chatGTP_prompts.csv", encoding='utf-8') as fp:
     chatgtp_prompts = data_df.astype(str).apply(lambda x: " ".join(x), axis=1)
 
 
+# https://www.kaggle.com/datasets/rtatman/questionanswer-dataset/code
 data_kaggle = pd.read_csv("random_question_data.txt", sep='\t')
 
 
