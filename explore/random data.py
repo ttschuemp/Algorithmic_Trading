@@ -35,8 +35,7 @@ with open("chatGTP_prompts.csv", encoding='utf-8') as fp:
     chatgtp_prompts = data_df.astype(str).apply(lambda x: " ".join(x), axis=1)
 
 
-file = open("random_question_data.txt", encoding='utf-8')
-data_kaggle = file.readlines()
+data_kaggle = pd.read_csv("random_question_data.txt", sep='\t')
 
 
 def generate_private_customer():
