@@ -38,7 +38,8 @@ with open("chatGTP_prompts.csv", encoding='utf-8') as fp:
 
 # https://www.kaggle.com/datasets/rtatman/questionanswer-dataset/code
 data_kaggle = pd.read_csv("random_question_data.txt", sep='\t')
-
+data_kaggle_questions = data_kaggle['Question']
+data_kaggle_questions_df = pd.DataFrame(data_kaggle_questions)
 
 def generate_private_customer():
     name = names.get_full_name()
@@ -104,6 +105,7 @@ df = pd.DataFrame(dataset, columns=["Name", "Address", "BP Nr", "Personen-Nr", "
 
 chatgtp_prompts_df = pd.DataFrame(chatgtp_prompts)
 chatgtp_prompts_df['isClient'] = 0
+data_kaggle_questions['isCleint'] = 0
 
 #df['isClient'] = df['isClient'].replace(np.nan,0)
 
