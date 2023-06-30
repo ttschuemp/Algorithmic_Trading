@@ -2,6 +2,7 @@ import random
 import pandas as pd
 import numpy as np
 import names
+import csv
 from random_address import real_random_address
 import string
 from sklearn.model_selection import train_test_split
@@ -11,6 +12,16 @@ from sklearn.metrics import accuracy_score
 
 
 # https://github.com/f/awesome-chatgpt-prompts/blob/main/prompts.csv
+
+# chatgtp prompts
+# Read CSV file
+with open("chatGTP_prompts.csv", encoding='utf-8') as fp:
+    reader = csv.reader(fp, delimiter=',')
+    # next(reader, None)  # skip the headers
+    data_read = [row for row in reader]
+    data_df = pd.DataFrame(data_read)
+    chatgtp_prompts = data_df.astype(str).apply(lambda x: " ".join(x), axis=1)
+
 
 def generate_private_customer():
     name = names.get_full_name()
@@ -55,9 +66,9 @@ def generate_random_dataset():
     for _ in range(global_custody_customers_count):
         dataset.append(generate_global_custody_customer())
 
-    string_count = 10000
-    for _ in range(string_count):
-        dataset.append(generateRandomStrings(5))
+    #string_count = 10000
+    #for _ in range(string_count):
+    #    dataset.append(generateRandomStrings(5))
 
     # Shuffle the order of records
     random.shuffle(dataset)
@@ -77,11 +88,18 @@ df['isClient'] = df['isClient'].replace(np.nan,0)
 
 df.fillna("No Card", inplace=True)
 
-df_combined = df[['Name', 'Address', "BP Nr", "Personen-Nr", "Konto-Nr", "Kartennummer"]]\
+#df_combined = df[['Name', 'Address', "BP Nr", "Personen-Nr", "Konto-Nr", "Kartennummer"]]\
+#    .astype(str).apply(lambda x: " ".join(x), axis=1)
+
+
+df_combined = df[['Name', 'Address', "BP Nr", "Personen-Nr", "Konto-Nr", "Kartennummer"]] \
     .astype(str).apply(lambda x: " ".join(x), axis=1)
 
+df_combined = df_combined.append(chatgtp_prompts)
+df_combined = df_combined.sample(frac = 1)
+
 # Apply random_split function to each row of the 'Text' column
-df_combined = df_combined.apply(lambda x: pd.Series(random_split(x))).astype(str).apply(lambda x: " ".join(x), axis=1)
+#df_combined = df_combined.apply(lambda x: pd.Series(random_split(x))).astype(str).apply(lambda x: " ".join(x), axis=1)
 
 # Separate the features (text data) and the target variable
 X = df_combined.values
