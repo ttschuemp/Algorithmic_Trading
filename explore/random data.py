@@ -4,8 +4,13 @@ import numpy as np
 import names
 from random_address import real_random_address
 import string
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import accuracy_score
 
 
+# https://github.com/f/awesome-chatgpt-prompts/blob/main/prompts.csv
 
 def generate_private_customer():
     name = names.get_full_name()
@@ -18,13 +23,14 @@ def generate_private_customer():
     return [name, addresse, bp_nr, personen_nr, konto_nr, karten_nr, is_client]
 
 def generate_global_custody_customer():
-    bp_nr = "GC-4343.8188.1000"
     name = f"GC Customer-{random.randint(1000, 9999)}"
+    bp_nr = "GC-4343.8188.1000"
+    addresse = 'keine Addresse'
     personen_nr = f"{random.randint(1000, 9999)}.{random.randint(1000, 9999)}"
     konto_nr = f"{random.randint(1000, 9999)}.{random.randint(1000, 9999)}.{random.randint(1000, 9999)}"
-    karten_nr = ""
+    karten_nr = "keine"
     is_client = 1
-    return [name, bp_nr, personen_nr, konto_nr, karten_nr, is_client]
+    return [name, addresse, bp_nr, personen_nr, konto_nr, karten_nr, is_client]
 
 def generateRandomStrings(num_strings):
     strings = []
@@ -68,13 +74,6 @@ dataset = generate_random_dataset()
 # Create DataFrame and save the dataset
 df = pd.DataFrame(dataset, columns=["Name", "Address", "BP Nr", "Personen-Nr", "Konto-Nr", "Kartennummer", "isClient"])
 df['isClient'] = df['isClient'].replace(np.nan,0)
-
-#%%
-import pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score
 
 df.fillna("No Card", inplace=True)
 
