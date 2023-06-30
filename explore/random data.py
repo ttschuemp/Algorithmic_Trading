@@ -84,7 +84,11 @@ dataset = generate_random_dataset()
 
 # Create DataFrame and save the dataset
 df = pd.DataFrame(dataset, columns=["Name", "Address", "BP Nr", "Personen-Nr", "Konto-Nr", "Kartennummer", "isClient"])
-df['isClient'] = df['isClient'].replace(np.nan,0)
+
+chatgtp_prompts_df = pd.DataFrame(chatgtp_prompts)
+chatgtp_prompts_df['isClient'] = 0
+
+#df['isClient'] = df['isClient'].replace(np.nan,0)
 
 df.fillna("No Card", inplace=True)
 
