@@ -13,6 +13,18 @@ from sklearn.metrics import accuracy_score
 
 # https://github.com/f/awesome-chatgpt-prompts/blob/main/prompts.csv
 
+# prompt generator
+# https://flowgpt.com/prompt/jtD5PEhnhmEM_HADcTQny
+
+# popular dataset for benchmarking QA engines,
+# https://github.com/brmson/dataset-factoid-webquestions
+# https://github.com/brmson/dataset-factoid-webquestions/blob/master/main/val.json
+
+#this!
+# https://ai.google.com/research/NaturalQuestions
+
+# https://www.kaggle.com/datasets/rtatman/questionanswer-dataset/code
+
 # chatgtp prompts
 # Read CSV file
 with open("chatGTP_prompts.csv", encoding='utf-8') as fp:
@@ -21,6 +33,10 @@ with open("chatGTP_prompts.csv", encoding='utf-8') as fp:
     data_read = [row for row in reader]
     data_df = pd.DataFrame(data_read)
     chatgtp_prompts = data_df.astype(str).apply(lambda x: " ".join(x), axis=1)
+
+
+file = open("random_question_data.txt", encoding='utf-8')
+data_kaggle = file.readlines()
 
 
 def generate_private_customer():
@@ -138,7 +154,7 @@ print(f"Accuracy: {accuracy}")
 user_input = input("Enter the text to classify: ")
 
 # Preprocess user input
-user_input_combined = " ".join(user_input)
+user_input_combined = "".join(user_input)
 user_input_vector = vectorizer.transform([user_input_combined])
 
 # Classify user input
@@ -147,4 +163,6 @@ if prediction[0] == 1:
     print("The text contains client information.")
 else:
     print("The text does not contain client information.")
+
 #%%
+#
