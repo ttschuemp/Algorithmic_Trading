@@ -37,7 +37,7 @@ with open("chatGTP_prompts.csv", encoding='utf-8') as fp:
 
 
 # https://www.kaggle.com/datasets/rtatman/questionanswer-dataset/code
-data_kaggle = pd.read_csv("random_question_data.txt", sep='\t', header=0)
+data_kaggle = pd.read_csv("random_question_data.txt", sep='\t', header=None)
 data_kaggle_questions = data_kaggle.iloc[:,1]
 data_kaggle_questions_df = pd.DataFrame(data_kaggle_questions)
 
@@ -102,32 +102,30 @@ dataset = generate_random_dataset()
 
 # Create DataFrame and save the dataset
 df = pd.DataFrame(dataset, columns=["Name", "Address", "BP Nr", "Personen-Nr", "Konto-Nr", "Kartennummer", "isClient"])
+df.fillna("No Card", inplace=True)
 
 chatgtp_prompts_df = pd.DataFrame(chatgtp_prompts)
 chatgtp_prompts_df['isClient'] = 0
 data_kaggle_questions_df['isClient'] = 0
 
-#df['isClient'] = df['isClient'].replace(np.nan,0)
+# client classification
+df_client = pd.concat([df['isClient'], chatgtp_prompts_df['isClient'], data_kaggle_questions_df['isClient']], ignore_index=True)
 
-df.fillna("No Card", inplace=True)
-
-#df_combined = df[['Name', 'Address', "BP Nr", "Personen-Nr", "Konto-Nr", "Kartennummer"]]\
-#    .astype(str).apply(lambda x: " ".join(x), axis=1)
-
-
+# combine question data
 df_combined = df[['Name', 'Address', "BP Nr", "Personen-Nr", "Konto-Nr", "Kartennummer"]] \
     .astype(str).apply(lambda x: " ".join(x), axis=1)
 
-df_combined = df_combined.append(chatgtp_prompts).to_frame()
-df_combined = df_combined.append(data_kaggle_questions_df)
+df_combined = pd.concat([df_combined, chatgtp_prompts], ignore_index=True)
+df_combined = pd.concat([df_combined, data_kaggle_questions_df.iloc[:,0]], ignore_index=True)
+df_combined = pd.concat([df_combined, df_client], axis=1)
 
-df_combined["isClient"] = df["isClient"].append(chatgtp_prompts_df['isClient'])
-
-
+# random sample df
 df_combined = df_combined.sample(frac = 1).reset_index(drop=True)
 
-# Apply random_split function to each row of the 'Text' column
-#df_combined = df_combined.apply(lambda x: pd.Series(random_split(x))).astype(str).apply(lambda x: " ".join(x), axis=1)
+# remove nan
+df_combined.dropna(axis=0, inplace=True)
+
+#%%
 
 # Separate the features (text data) and the target variable
 X = df_combined.iloc[:,0].values
