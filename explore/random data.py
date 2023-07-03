@@ -26,6 +26,10 @@ from sklearn.metrics import accuracy_score
 # https://www.kaggle.com/datasets/rtatman/questionanswer-dataset/code
 # https://www.kaggle.com/code/leomauro/nlp-document-retrieval-for-question-answering
 
+### bank client dataset
+# https://data.world/lpetrocelli/retail-banking-demo-data/workspace/file?filename=CRM+Events.csv
+# CRM data
+
 # chatgtp prompts
 # Read CSV file
 with open("chatGTP_prompts.csv", encoding='utf-8') as fp:
@@ -167,4 +171,42 @@ else:
     print("The text does not contain client information.")
 
 #%%
-#
+
+# https://stackabuse.com/text-classification-with-python-and-scikit-learn/
+
+from nltk.stem import WordNetLemmatizer
+import nltk
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import TfidfTransformer
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
+nltk.download('stopwords')
+nltk.download('wordnet')
+from nltk.corpus import stopwords
+
+
+
+stemmer = WordNetLemmatizer()
+document = df_combined.iloc[:,0].apply(lambda x: ' '.join(([stemmer.lemmatize(word) for word in x.split()])))
+
+vectorizer = CountVectorizer(max_features=1500, min_df=5, max_df=0.7, stop_words=stopwords.words('english'))
+X = vectorizer.fit_transform(document).toarray()
+
+tfidfconverter = TfidfTransformer()
+X = tfidfconverter.fit_transform(X).toarray()
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+
+classifier = RandomForestClassifier(n_estimators=1000, random_state=0)
+classifier.fit(X_train, y_train)
+y_pred = classifier.predict(X_test)
+
+accuracy = accuracy_score(y_test, y_pred)
+print(f"Accuracy: {accuracy}")
+
+
+print(confusion_matrix(y_test,y_pred))
+print(classification_report(y_test,y_pred))
+
+
+#%%
