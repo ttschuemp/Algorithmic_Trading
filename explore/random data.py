@@ -24,7 +24,7 @@ from sklearn.metrics import accuracy_score
 # https://github.com/brmson/dataset-factoid-webquestions
 # https://github.com/brmson/dataset-factoid-webquestions/blob/master/main/val.json
 
-#this!
+# google NQ datasets
 # https://ai.google.com/research/NaturalQuestions
 
 # https://www.kaggle.com/datasets/rtatman/questionanswer-dataset/code
@@ -50,12 +50,21 @@ data_kaggle_questions = data_kaggle.iloc[:,1]
 data_kaggle_questions_df = pd.DataFrame(data_kaggle_questions)
 
 def generate_private_customer():
+    """
+    logic:
+    Level 1: Person             -> Vertragspartner: Max Mustermann, Personen-Nr: 1234.5678, Geburtsdatum
+    Level 2: Business Partner   -> Definiert Geschäftsbeziehung, BP-Nr 0123.4567
+    Level 3: Container          -> Standardportfolio, Depo, VV-Mandat, Vorsorge-Konto, 1234.5678.1001
+    Level 4: Money Account      -> Konto, Kreditlimiten, Sicherheiten, Schrankfach, Mieterspardepot, Wertschriften
+    Level 5: Asset              -> FX, Stocks, Bonds, Fonds, Options
+    """
     name = names.get_full_name()
     bp_nr = f"{random.randint(1000, 9999)}.{random.randint(1000, 9999)}"
     addresse = f"{real_random_address()['address1']}, {real_random_address()['postalCode']}"
     konto_nr = f"{bp_nr}.100{random.randint(1, 9)}"
     personen_nr = f"{random.randint(1000, 9999)}.{random.randint(1000, 9999)}"
     karten_nr = str(random.randint(10**15, 10**16 - 1))  # 16-digit random number
+    # container_nr = f"{random.randint(1000, 9999)}.{random.randint(1000, 9999)}.{random.randint(1000, 9999)}"
     is_client = 1
     return [name, addresse, bp_nr, personen_nr, konto_nr, karten_nr, is_client]
 
@@ -91,10 +100,6 @@ def generate_random_dataset():
     global_custody_customers_count = 100
     for _ in range(global_custody_customers_count):
         dataset.append(generate_global_custody_customer())
-
-    #string_count = 10000
-    #for _ in range(string_count):
-    #    dataset.append(generateRandomStrings(5))
 
     # Shuffle the order of records
     random.shuffle(dataset)
