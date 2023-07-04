@@ -206,8 +206,6 @@ print(f"Accuracy: {accuracy}")
 print(confusion_matrix(y_test,y_pred))
 print(classification_report(y_test,y_pred))
 
-
-#%%
 # Get user input
 user_input = input("Enter the text to classify: ")
 
@@ -254,5 +252,103 @@ y_pred = rfc.predict(X_test)
 
 print(confusion_matrix(y_test,y_pred))
 print(classification_report(y_test,y_pred))
+
+#%%
+from nltk.stem import WordNetLemmatizer
+import nltk
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import TfidfTransformer
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
+from sklearn.model_selection import train_test_split
+from nltk.corpus import stopwords
+import openai
+
+nltk.download('stopwords')
+nltk.download('wordnet')
+
+class TextClassifier:
+    def __init__(self):
+        self.stemmer = WordNetLemmatizer()
+        self.vectorizer = CountVectorizer(max_features=1500, min_df=5, max_df=0.7, stop_words=stopwords.words('english'))
+        self.tfidfconverter = TfidfTransformer()
+        self.classifier = RandomForestClassifier(n_estimators=1000, random_state=0)
+
+    def preprocess(self, documents):
+        preprocessed_documents = documents.apply(lambda x: ' '.join([self.stemmer.lemmatize(word) for word in x.split()]))
+        return preprocessed_documents
+
+    def train(self, X, y):
+        X_preprocessed = self.preprocess(X)
+        X_vectorized = self.vectorizer.fit_transform(X_preprocessed).toarray()
+        X_tfidf = self.tfidfconverter.fit_transform(X_vectorized).toarray()
+
+        X_train, X_test, y_train, y_test = train_test_split(X_tfidf, y, test_size=0.2, random_state=0)
+        self.classifier.fit(X_train, y_train)
+        y_pred = self.classifier.predict(X_test)
+
+        accuracy = accuracy_score(y_test, y_pred)
+        print(f"Accuracy: {accuracy}")
+        print(confusion_matrix(y_test, y_pred))
+        print(classification_report(y_test, y_pred))
+
+    def classify(self, text):
+        text_combined = "".join(text)
+        text_vector = self.vectorizer.transform([text_combined])
+        prediction = self.classifier.predict(text_vector)
+
+        if prediction[0] == 1:
+            return "The text contains client information."
+        else:
+            return "The text does not contain client information."
+
+    def generate_prompt(self, user_input):
+        prompt = f"User: {user_input}\nAI:"
+        self.response = openai.Completion.create(
+            engine='davinci',
+            prompt=prompt,
+            max_tokens=50,
+            temperature=0.7,
+            n=1,
+            stop=None,
+            verify = False
+        )
+        return response.choices[0].text.strip()
+
+
+#%%
+def main():
+
+    openai.api_key = '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'
+
+    # Create an instance of the TextClassifier class
+    classifier = TextClassifier()
+
+    # Provide your training data (X) and corresponding labels (y)
+    # Replace X and y with your own data
+    X = df_combined.iloc[:, 0]
+    y = df_combined.iloc[:, 1]
+
+    # Train the classifier
+    classifier.train(X, y)
+
+    # Get user input
+    user_input = input("Enter the text to classify: ")
+
+    # Classify user input
+    classification_result = classifier.classify([user_input])
+    if classification_result != "The text contains client information.":
+        print(classification_result)
+        generated_prompt = classifier.generate_prompt(user_input)
+        print("Generated Prompt:")
+        print(generated_prompt)
+
+    else:
+        print(classification_result)
+
+if __name__ == '__main__':
+    main()
+
+
 
 #%%
