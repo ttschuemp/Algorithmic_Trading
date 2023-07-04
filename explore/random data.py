@@ -11,6 +11,10 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
 
 
+# presidio Demo
+# https://huggingface.co/spaces/presidio/presidio_demo
+
+
 # https://github.com/f/awesome-chatgpt-prompts/blob/main/prompts.csv
 
 # prompt generator
@@ -219,39 +223,7 @@ if prediction[0] == 1:
     print("The text contains client information.")
 else:
     print("The text does not contain client information.")
-#%%
 
-# https://www.kaggle.com/datasets/prakharrathi25/banking-dataset-marketing-targets
-# https://stackabuse.com/random-forest-algorithm-with-python-and-scikit-learn/
-
-
-# test random forest
-banking_data = pd.read_csv("banking_dataset.csv", sep=';')
-banking_df = banking_data[['age', 'education', 'default', 'balance', 'housing', 'loan']].copy()
-banking_df['education'] = banking_data['education'].replace('unknown', 0).replace('primary', 1).replace('secondary', 2).replace('tertiary', 3)
-banking_df['default'] = banking_data['default'].replace('no', 0).replace('yes', 1)
-banking_df['housing'] = banking_data['housing'].replace('yes', 1).replace('no', 0)
-banking_df['loan'] = banking_data['loan'].replace('yes', 1).replace('no', 0)
-banking_df.rename(columns={'default': 'y'}, inplace=True)
-
-y = banking_df['y']
-X = banking_df.drop(['y'], axis=1)
-
-X_train, X_test, y_train, y_test = train_test_split(X, y,
-                                                    test_size=0.2,
-                                                    random_state=42)
-
-rfc = RandomForestClassifier(n_estimators=3,
-                             max_depth=2,
-                             random_state=42)
-
-# Fit RandomForestClassifier
-rfc.fit(X_train, y_train)
-# Predict the test set labels
-y_pred = rfc.predict(X_test)
-
-print(confusion_matrix(y_test,y_pred))
-print(classification_report(y_test,y_pred))
 
 #%%
 from nltk.stem import WordNetLemmatizer
@@ -351,4 +323,28 @@ if __name__ == '__main__':
 
 
 
+
+#%%
+from presidio_analyzer import AnalyzerEngine
+from presidio_anonymizer import AnonymizerEngine
+import spacy.cli
+spacy.cli.download("en_core_web_lg")
+
+#%%
+
+# https://pypi.org/project/presidio-anonymizer/
+
+
+text="My client Hasan Inal has problems with his Account with Number 324.234.123"
+# Set up the engine, loads the NLP module (spaCy model by default)
+# and other PII recognizers
+analyzer = AnalyzerEngine()
+# Call analyzer to get results
+results = analyzer.analyze(text=text,
+                           entities=["PERSON","PHONE_NUMBER"],
+                           language='en')
+
+anonymizer = AnonymizerEngine()
+
+anonymized_text = anonymizer.anonymize(text=text,analyzer_results=results)
 #%%
