@@ -123,12 +123,19 @@ category = 'linear'
 limit = 1000
 symbol = 'ETHPERP'  # Replace with the desired symbol
 
-# Additional optional parameters
-start_time = int(datetime.timestamp(datetime(2023, 1, 1)))  # Replace with the desired start time in Unix timestamp format
-end_time = int(datetime.timestamp(datetime(2023, 12, 31)))  # Replace with the desired end time in Unix timestamp format
-
 # Make the API call to get historical funding rates
 funding_rate_history = session.get_funding_rate_history(category=category, symbol=symbol, limit=limit)
 
-# Print or process the response as needed
-print(funding_rate_history)
+
+funding_rates = [entry['fundingRate'] for entry in funding_rate_history['result']['list']]
+timestamps = [int(entry['fundingRateTimestamp']) for entry in funding_rate_history['result']['list']]
+
+# Convert timestamps to readable format (assuming timestamps are in milliseconds)
+readable_timestamps = [datetime.utcfromtimestamp(timestamp / 1000).strftime('%Y-%m-%d %H:%M:%S') for timestamp in timestamps]
+
+df = pd.DataFrame({
+    'Symbol': [entry['symbol'] for entry in funding_rate_history['result']['list']],
+    'Funding Rate': funding_rates,
+    'Timestamp': timestamps,
+    'Readable Timestamp': readable_timestamps,
+})
