@@ -115,27 +115,116 @@ session = HTTP(
     api_secret=api_secret,
 )
 
-# Assuming you have already created an instance of MarketHTTP with the appropriate API credentials
+params = {
+    'category': 'linear',
+}
 
+# Make the API request
+response = session.get_instruments_info(**params)
+all_perps = [instrument['symbol'] for instrument in response['result']['list']]
 
 # Set the required parameters
 category = 'linear'
 limit = 1000
-symbol = 'ETHPERP'  # Replace with the desired symbol
 
-# Make the API call to get historical funding rates
-funding_rate_history = session.get_funding_rate_history(category=category, symbol=symbol, limit=limit)
+# Fetch funding rates for the first 10 perpetual contracts
+num_perps = 10
+plt.figure(figsize=(12, 6))
+
+for symbol in all_perps[:num_perps]:
+    # Make the API call to get historical funding rates
+    funding_rate_history = session.get_funding_rate_history(category=category, symbol=symbol, limit=limit)
+
+    funding_rates = [float(entry['fundingRate']) for entry in funding_rate_history['result']['list']]
+    timestamps = [int(entry['fundingRateTimestamp']) for entry in funding_rate_history['result']['list']]
+
+    # Convert timestamps to readable format (assuming timestamps are in milliseconds)
+    readable_timestamps = [datetime.utcfromtimestamp(timestamp / 1000).strftime('%Y-%m-%d %H:%M:%S') for timestamp in timestamps]
+
+    df = pd.DataFrame({
+        'Symbol': [entry['symbol'] for entry in funding_rate_history['result']['list']],
+        'Funding Rate': funding_rates,
+        'Timestamp': timestamps,
+        'Readable Timestamp': readable_timestamps,
+    })
+
+    df['Timestamp'] = pd.to_datetime(df['Timestamp'], unit='ms')
+
+    # Plot funding rates for each symbol
+    plt.plot(df['Timestamp'], df['Funding Rate'], label=symbol)
+
+plt.title('Funding Rates Over Time - All Symbols')
+plt.xlabel('Timestamp')
+plt.ylabel('Funding Rate')
+plt.legend()
+plt.grid(True)
+plt.show()
 
 
-funding_rates = [entry['fundingRate'] for entry in funding_rate_history['result']['list']]
-timestamps = [int(entry['fundingRateTimestamp']) for entry in funding_rate_history['result']['list']]
+category = 'linear'
+limit_newest = 1  # Fetch only the newest funding rate
+limit_hist = 100  # Fetch historical funding rates
 
-# Convert timestamps to readable format (assuming timestamps are in milliseconds)
-readable_timestamps = [datetime.utcfromtimestamp(timestamp / 1000).strftime('%Y-%m-%d %H:%M:%S') for timestamp in timestamps]
+# Fetch the newest funding rate for all symbols
+all_funding_rates = []
 
-df = pd.DataFrame({
-    'Symbol': [entry['symbol'] for entry in funding_rate_history['result']['list']],
-    'Funding Rate': funding_rates,
-    'Timestamp': timestamps,
-    'Readable Timestamp': readable_timestamps,
-})
+for symbol in all_perps:
+    # Make the API call to get historical funding rates
+    funding_rate_history = session.get_funding_rate_history(category=category, symbol=symbol, limit=limit_newest)
+
+    # Check if the list is not empty before accessing the first element
+    if 'list' in funding_rate_history['result'] and funding_rate_history['result']['list']:
+        newest_funding_rate = float(funding_rate_history['result']['list'][0]['fundingRate'])
+        all_funding_rates.append({'Symbol': symbol, 'Newest Funding Rate': newest_funding_rate})
+
+# Create a DataFrame from the collected data
+df_all_funding_rates = pd.DataFrame(all_funding_rates)
+
+# Check if DataFrame is not empty before proceeding
+if not df_all_funding_rates.empty:
+    # Sort DataFrame by 'Newest Funding Rate' in descending order
+    df_all_funding_rates = df_all_funding_rates.sort_values(by='Newest Funding Rate', ascending=False).head(10)
+
+    # Create a single chart with 10 subplots
+    fig, axs = plt.subplots(5, 2, figsize=(15, 20))
+    fig.suptitle('Top 10 Symbols - Historical Funding Rates', fontsize=16)
+
+    for i, symbol in enumerate(df_all_funding_rates['Symbol']):
+        # Calculate subplot position
+        row = i // 2
+        col = i % 2
+
+        # Get the current subplot axis
+        ax = axs[row, col]
+
+        # Make the API call to get historical funding rates for the selected symbol
+        funding_rate_history = session.get_funding_rate_history(category=category, symbol=symbol, limit=limit_hist)
+
+        # Check if the list is not empty before accessing the first element
+        if 'list' in funding_rate_history['result'] and funding_rate_history['result']['list']:
+            # Extract historical funding rates and timestamps
+            funding_rates = [float(entry['fundingRate']) for entry in funding_rate_history['result']['list']]
+            timestamps = [int(entry['fundingRateTimestamp']) for entry in funding_rate_history['result']['list']]
+
+            # Convert timestamps to readable format (assuming timestamps are in milliseconds)
+            readable_timestamps = [datetime.utcfromtimestamp(timestamp / 1000).strftime('%Y-%m-%d %H:%M:%S') for timestamp in timestamps]
+
+            # Plot line chart for the selected symbol
+            ax.plot(readable_timestamps, funding_rates, label=symbol)
+            ax.set_title(symbol)
+            ax.set_ylabel('Funding Rate')
+            ax.legend()
+            ax.tick_params(axis='x', rotation=45)
+
+            # Set x-axis labels for the bottom two charts
+            if row == 4:
+                ax.set_xlabel('Timestamp')
+                ax.tick_params(axis='x', rotation=45)  # Rotate x-axis labels
+                ax.xaxis.set_major_locator(plt.MaxNLocator(6))  # Set maximum number of date labels
+            else:
+                ax.set_xticklabels([])  # Hide x-axis labels for other charts
+
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    plt.show()
+else:
+    print('DataFrame is empty. No data to plot.')
